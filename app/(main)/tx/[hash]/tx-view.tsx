@@ -1,0 +1,165 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import { createPublicClient, http, formatEther } from "viem";
+import { monadTestnet, monad } from "viem/chains";
+
+const RPC_TEST = createPublicClient({ chain: monadTestnet, transport: http() });
+const RPC_MAIN = createPublicClient({ chain: monad, transport: http() });
+
+type TxData = { from: string; to: string | null; value: string; block: number; onMain: boolean };
+
+function fmtAddr(a?: string | null) {
+  return a ? `${a.slice(0, 6)}…${a.slice(-4)}` : "?";
+}
+
+export default function TxView({ hash, vid, short, start, end, autoplay }: { hash: string; vid: string | null; short: boolean; start: number | null; end: number | null; autoplay: boolean }) {
+  const [data, setData] = useState<TxData | null>(null);
+  const [error, setError] = useState("");
+  const [muted, setMuted] = useState(true);
+  const playerRef = useRef<HTMLIFrameElement>(null);
+
+  // receiver can unmute at any time; muting again is also allowed
+  function toggleMute() {
+    const next = !muted;
+    setMuted(next);
+    try {
+      playerRef.current?.contentWindow?.postMessage(
+        JSON.stringify({ event: "command", func: next ? "mute" : "unMute" }),
+        "*"
+      );
+      if (!next) playerRef.current?.contentWindow?.postMessage(JSON.stringify({ event: "command", func: "playVideo" }), "*");
+    } catch {}
+  }
+
+  useEffect(() => {
+    let dead = false;
+    async function load() {
+      setError("");
+      setData(null);
+      const candidates: Array<[ReturnType<typeof createPublicClient>, boolean]> = [
+        [RPC_TEST as any, false],
+        [RPC_MAIN as any, true],
+      ];
+      for (const [client, onMain] of candidates) {
+        try {
+          const [tx, rcpt] = await Promise.all([
+            client.getTransaction(hash as any),
+            client.getTransactionReceipt(hash as any),
+          ]);
+          if (dead) return;
+          if (!rcpt) continue;
+          setData({
+            from: tx.from,
+            to: tx.to ?? null,
+            value: formatEther(tx.value ?? 0n),
+            block: Number(rcpt.blockNumber),
+            onMain,
+          });
+          return;
+        } catch {
+          /* try next chain */
+        }
+      }
+      if (!dead) setError("Transaction not found on Monad yet — it may still be confirming.");
+    }
+    load();
+    const retry = setInterval(() => {
+      if (!data && !error) load();
+    }, 8000);
+    return () => {
+      dead = true;
+      clearInterval(retry);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hash]);
+
+  return (
+    <main className="min-h-screen bg-[#faf9fc] text-slate-900 flex flex-col items-center px-4 py-8">
+      <div className="w-full max-w-md">
+        <div className="flex items-center justify-center mb-6">
+          <img src="/mytips-icon.png" alt="" className="w-[36px] h-[36px] inline-block" />
+          <span className="font-bold text-lg tracking-tight ml-0">
+            MY<span className="text-violet-600">TIPS</span>
+          </span>
+        </div>
+
+        <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 text-center">
+          <div className="text-5xl mb-2 animate-[popin_0.6s_cubic-bezier(0.2,1.4,0.4,1)]">🎁</div>
+          <h1 className="text-xl font-bold">A gift arrived on-chain</h1>
+          {data ? (
+            <>
+              <p className="text-3xl font-extrabold text-violet-600 mt-3">
+                {Number(data.value) > 0 ? `${data.value} MON` : "Transaction"}
+              </p>
+              <p className="text-sm text-slate-500 mt-1">
+                {fmtAddr(data.from)} → {fmtAddr(data.to)}
+              </p>
+              <p className="text-xs text-slate-400 mt-1">
+                {data.onMain ? "Monad Mainnet" : "Monad Testnet"} · block {data.block.toLocaleString()}
+              </p>
+            </>
+          ) : error ? (
+            <p className="text-sm text-slate-400 mt-3">{error}</p>
+          ) : (
+            <p className="text-sm text-slate-400 mt-3 animate-pulse">Checking the chain…</p>
+          )}
+
+          <div className="mt-4 rounded-xl bg-slate-50 border border-slate-200 px-3 py-2 text-[11px] font-mono text-slate-500 break-all">
+            {hash}
+          </div>
+
+          {vid && (
+            <div
+              className="mt-5 overflow-hidden rounded-2xl border border-slate-200 shadow-sm mx-auto relative"
+              style={{ width: short ? 300 : "100%", aspectRatio: short ? "9/16" : "16/9" }}
+            >
+              <iframe
+                ref={playerRef}
+                src={`https://www.youtube-nocookie.com/embed/${vid}?enablejsapi=1&rel=0&mute=${autoplay ? 1 : 0}&autoplay=${autoplay ? 1 : 0}${start != null ? `&start=${start}` : ""}${end != null ? `&end=${end}` : ""}`}
+                className="w-full h-full"
+                style={{ border: 0 }}
+                allow="accelerometer; encrypted-media; picture-in-picture; autoplay"
+                allowFullScreen
+                title="gift video"
+              />
+              <button
+                onClick={toggleMute}
+                aria-label={muted ? "Unmute video" : "Mute video"}
+                className="absolute bottom-2 right-2 flex h-9 w-9 items-center justify-center rounded-full bg-black/60 text-white backdrop-blur hover:bg-black/80 transition-colors"
+              >
+                {muted ? (
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M11 5L6 9H2v6h4l5 5V5z" />
+                    <line x1="23" y1="9" x2="17" y2="15" />
+                    <line x1="17" y1="9" x2="23" y2="15" />
+                  </svg>
+                ) : (
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M11 5L6 9H2v6h4l5 5V5z" />
+                    <path d="M15.5 8.5a5 5 0 010 7" />
+                    <path d="M18.5 5.5a9 9 0 010 13" />
+                  </svg>
+                )}
+              </button>
+              {autoplay && muted && (
+                <p className="absolute bottom-2 left-2 rounded-full bg-black/60 px-2.5 py-1 text-[11px] font-medium text-white backdrop-blur">
+                  Tapping unmute plays with sound
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+
+        <p className="text-center text-xs text-slate-400 mt-6">
+          Sent with{" "}
+          <a href="/" className="text-violet-500 underline">
+            MYTIPS
+          </a>{" "}
+          · tips & gifts land straight in wallets, no escrow
+        </p>
+      </div>
+      <style>{`@keyframes popin{from{transform:scale(0.4);opacity:0}to{transform:scale(1);opacity:1}}`}</style>
+    </main>
+  );
+}

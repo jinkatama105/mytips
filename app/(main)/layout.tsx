@@ -1,0 +1,33 @@
+import type { Metadata } from "next";
+import { Suspense } from "react";
+import { Geist, Geist_Mono } from "next/font/google";
+import "../globals.css";
+import { Providers } from "@/lib/providers";
+
+const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
+const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
+
+export const metadata: Metadata = {
+  title: "MYTIPS — tip any streamer in MON",
+  description:
+    "One link per streamer. Viewers tip native MON on Monad — no gateway, no chargebacks, instant onchain payouts.",
+};
+
+export default function MainLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html
+      lang="en"
+      className={`${geistSans.variable} ${geistMono.variable}`}
+      suppressHydrationWarning
+    >
+      <body className="antialiased" suppressHydrationWarning>
+        <Suspense fallback={null}>
+          <Providers>{children}</Providers>
+        </Suspense>
+      {/* impeccable-live-start */}
+<script src="http://localhost:8400/live.js?token=755ce5a8-f0ca-4195-857d-aa52fed7a465"></script>
+{/* impeccable-live-end */}
+</body>
+    </html>
+  );
+}
