@@ -42,7 +42,7 @@ export async function generateMetadata({ searchParams }: Ctx) {
     ? "Someone sent you a gift 🎁 — with a video"
     : "On-chain gift sent 🎁 — view the transaction";
   const desc = "Sent on Monad with MYTIPS — tap to watch the video and see the transaction.";
-  const host = process.env.VERCEL_URL ?? "mytips-self.vercel.app";
+  const host = "mytips.fun";
   const proto = "https";
   let poster: string | null = null;
   let videoEmbed: string | null = null;
@@ -67,7 +67,7 @@ export async function generateMetadata({ searchParams }: Ctx) {
     }
     const direct = await fetchOgImage(target);
     // route through our own proxy: FB/IG CDNs expire their signed URLs quickly
-    poster = direct ? `${proto}://${host}/api/og-proxy?url=${encodeURIComponent(target)}` : `https://mytips-self.vercel.app/mytips-icon.png`;
+    poster = direct ? `${proto}://${host}/api/og-proxy?url=${encodeURIComponent(target)}` : `https://mytips.fun/mytips-icon.png`;
     if (media.platform === "facebook" && direct) {
       videoEmbed = `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(target.split("?")[0] + (target.includes("idorvanity") ? `?idorvanity=${new URL(target).searchParams.get("idorvanity")}` : ""))}&show_text=false&width=560`;
     }
