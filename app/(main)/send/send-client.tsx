@@ -7,7 +7,7 @@ import { useBalance } from "wagmi";
 import { formatEther } from "viem";
 import { monadTestnet } from "viem/chains";
 import MonPrice from "@/components/mon-price";
-import { detectMedia, embedSrc } from "@/lib/media";
+import { detectMedia, embedSrc, type Media } from "@/lib/media";
 const TX_RE = /^0x[0-9a-fA-F]{64}$/;
 
 // "42" | "42s" | "1m30s" | "0:24" | "0:24.5" -> seconds
@@ -124,7 +124,27 @@ export default function SendClient() {
   }, [menuOpen]);
   const [timeStr, setTimeStr] = useState(""); // manual: "90" | "1:23" | "0:24-0:33"
   const [autoplay, setAutoplay] = useState(true); // sender's choice: video starts playing on the share page (always muted)
-  const media = detectMedia(ytLink);
+  const detected = detectMedia(ytLink);
+  // facebook.com/share/v/… shortlinks must be resolved server-side before the plugin accepts them
+  const [fbResolved, setFbResolved] = useState<string | null>(null);
+  const [fbResolving, setFbResolving] = useState(false);
+  const isFbShare = detected?.platform === "facebook" && /\/share\/[a-z]\//i.test(detected.id);
+  useEffect(() => {
+    if (!isFbShare || !detected) { setFbResolved(null); setFbResolving(false); return; }
+    let cancelled = false;
+    setFbResolving(true);
+    fetch(`/api/resolve-fb?url=${encodeURIComponent(detected.id)}`)
+      .then((r) => r.json())
+      .then((j) => { if (!cancelled) { setFbResolved(j.url ?? null); setFbResolving(false); } })
+      .catch(() => { if (!cancelled) { setFbResolved(null); setFbResolving(false); } });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [detected?.id, isFbShare]);
+  const media: Media | null = detected
+    ? isFbShare
+      ? fbResolved ? { ...detected, id: fbResolved } : null
+      : detected
+    : null;
   const valid = TX_RE.test(txHash.trim());
 
   // start time: manual field wins, else auto from the link (?t= / #t= / &start=)
@@ -368,8 +388,11 @@ export default function SendClient() {
           className="mt-1 w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm"
           placeholder="YouTube / Facebook / X / TikTok / Instagram link"
         />
-        {ytLink.trim() && !media && (
-          <p className="text-xs text-red-500 mt-1">Not recognized — paste a YouTube, Facebook video, X post, TikTok video, or Instagram reel/post link</p>
+        {ytLink.trim() && !media && !fbResolving && (
+          <p className="text-xs text-red-500 mt-1">Not recognized — paste a YouTube, Facebook, X, TikTok, or public Instagram/Facebook video link.</p>
+        )}
+        {fbResolving && (
+          <p className="text-xs text-slate-400 mt-1 animate-pulse">Resolving Facebook link…</p>
         )}
         {media?.platform === "youtube" && (
           <div className="mt-2 flex items-center gap-2">

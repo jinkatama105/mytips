@@ -46,15 +46,43 @@ export function detectMedia(link: string): Media | null {
     };
   }
 
-  // Facebook — watch / videos / reels; the plugin needs the ORIGINAL url
+  // Facebook — watch / videos / reels / share shortlinks; the plugin needs the ORIGINAL url
   if (
-    /(?:facebook\.com|fb\.watch)\/.*(?:videos?|reels?|watch)/i.test(raw) ||
-    /^https:\/\/fb\.watch\//i.test(raw)
+    /(?:facebook\.com|fb\.watch)\/.*(?:videos?|reels?|watch|share\/)/i.test(raw) ||
+    /^https:\/\/(www\.|m\.|web\.)?fb\.watch\//i.test(raw)
   ) {
     return { platform: "facebook", id: raw, vertical: /\/reels?\//i.test(raw), label: "Facebook" };
   }
 
   return null;
+}
+
+const FB_SHARE_RE = /(?:facebook\.com|fb\.watch)\/share\/[a-z]\/[\w-]+/i;
+export function isFbShareLink(url: string): boolean {
+  return FB_SHARE_RE.test(url);
+}
+
+/** Follow the facebook.com/share/v/… redirect server-side and return the canonical
+ *  /videos/ URL that plugins/video.php actually accepts. Null if unresolvable. */
+export async function resolveFbShare(url: string): Promise<string | null> {
+  const target = url.startsWith("http") ? url : `https://${url.replace(/^\/\//, "")}`;
+  try {
+    const res = await fetch(target, {
+      redirect: "follow",
+      headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36" },
+      cache: "no-store",
+      signal: AbortSignal.timeout(8000),
+    });
+    const finalUrl = res.url || target;
+    // canonical video URL = the one the plugin's own embed code uses
+    if (/\/(?:videos?|reels?)\/\d+/.test(finalUrl)) {
+      // keep query params like idorvanity — the plugin's generated code includes them
+      return finalUrl;
+    }
+    return null;
+  } catch {
+    return null;
+  }
 }
 
 /** iframe src for the embed player. `muted`/`autoplay` only honored by YouTube. */
