@@ -64,9 +64,9 @@ function timeFromLink(link: string): number | null {
 
 export default function SendClient() {
   const { ready, authenticated, login, logout } = usePrivy();
-  const { connectedWallets, wallets } = useWallets();
-  // Privy embedded wallets aren't "connected" in the injected sense — fall back to them
-  const wallet = connectedWallets?.[0] ?? wallets?.[0];
+  const { ready: walletsReady, wallets } = useWallets();
+  // Privy v3: wallets = all connected/embedded wallets of the logged-in user
+  const wallet = wallets?.[0];
   const [txHash, setTxHash] = useState("");
   const [ytLink, setYtLink] = useState("");
   const [amount, setAmount] = useState(""); // MON to send directly (optional path)
@@ -78,8 +78,7 @@ export default function SendClient() {
   const { data: balance } = useBalance({
     address: wallet?.address as `0x${string}` | undefined,
     chainId: monadTestnet.id,
-    enabled: !!wallet && menuOpen,
-    query: { staleTime: 15_000 },
+    query: { enabled: !!wallet && menuOpen, staleTime: 15_000 },
   });
   const [handle, setHandle] = useState<string | null>(null);
 
