@@ -9,9 +9,9 @@ const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "MYTIPS — tip any streamer in MON",
+  title: "MYTIPS — send onchain gifts with a video",
   description:
-    "One link per streamer. Viewers tip native MON on Monad — no gateway, no chargebacks, instant onchain payouts.",
+    "Send native MON on Monad with a YouTube/TikTok/X video attached — one shareable gift page with the video in the preview card on X, Telegram, and WhatsApp.",
 };
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
