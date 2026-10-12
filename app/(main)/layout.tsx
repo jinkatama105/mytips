@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import { Suspense } from "react";
 import { Geist, Geist_Mono } from "next/font/google";
 import "../globals.css";
@@ -24,10 +25,12 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
         <Suspense fallback={null}>
           <Providers>{children}</Providers>
         </Suspense>
-      {/* impeccable-live-start */}
-<script src="http://localhost:8400/live.js?token=755ce5a8-f0ca-4195-857d-aa52fed7a465"></script>
-{/* impeccable-live-end */}
-</body>
+        {/* impeccable-live-start */}
+        {process.env.NODE_ENV === "development" && (
+          <Script src={"http://localhost:8400/live.js?token=755ce5a8-f0ca-4195-857d-aa52fed7a465"} />
+        )}
+        {/* impeccable-live-end */}
+      </body>
     </html>
   );
 }
