@@ -59,28 +59,6 @@ export default function Home() {
           Pay a friend or attach any onchain transaction, add a YouTube / TikTok / X / video link,
           and get one shareable page that plays the gift with the transaction in the preview card.
         </p>
-        <div className="mt-8 flex gap-3 flex-wrap justify-center">
-          <Link
-            href="/send"
-            className="bg-slate-900 text-white rounded-xl px-5 py-3 font-medium hover:bg-slate-700"
-          >
-            🎁 Send a gift with a video →
-          </Link>
-        </div>
-
-        <Link
-          href="/send"
-          className="mt-6 w-full max-w-md rounded-2xl border border-violet-200 bg-white p-4 text-left hover:bg-violet-50 transition flex items-center gap-4"
-        >
-          <span className="text-3xl">🎁</span>
-          <span>
-            <span className="block font-semibold text-sm">Send a gift with a video</span>
-            <span className="block text-xs text-slate-500">
-              Pay or paste any tx hash + video link → share it on X/Telegram/WhatsApp with the video in the preview card
-            </span>
-          </span>
-          <span className="ml-auto text-violet-500 font-medium">→</span>
-        </Link>
       </section>
 
       <section id="how-it-works" className="max-w-5xl mx-auto w-full px-6 pb-20 scroll-mt-24">
