@@ -47,7 +47,17 @@ export async function generateMetadata({ searchParams }: Ctx) {
   let poster: string | null = null;
   let videoEmbed: string | null = null;
   if (media?.platform === "youtube") {
-    poster = `https://i.ytimg.com/vi/${media.id}/maxresdefault.jpg`;
+    // maxres doesn't exist for many videos (404 -> blank preview); probe and fall back
+    const max = `https://i.ytimg.com/vi/${media.id}/maxresdefault.jpg`;
+    const hq = `https://i.ytimg.com/vi/${media.id}/hqdefault.jpg`;
+    let useMax = true;
+    try {
+      const r = await fetch(max, { method: "HEAD", signal: AbortSignal.timeout(4000) });
+      useMax = r.ok;
+    } catch {
+      useMax = false;
+    }
+    poster = useMax ? max : hq;
     videoEmbed = `https://www.youtube.com/embed/${media.id}?autoplay=1${play("1")}`;
   } else if (media && media.platform !== "twitter") {
     // scrape the source page's og:image so chat previews show the real thumbnail
@@ -57,7 +67,7 @@ export async function generateMetadata({ searchParams }: Ctx) {
     }
     const direct = await fetchOgImage(target);
     // route through our own proxy: FB/IG CDNs expire their signed URLs quickly
-    poster = direct ? `${proto}://${host}/api/og-proxy?url=${encodeURIComponent(target)}` : null;
+    poster = direct ? `${proto}://${host}/api/og-proxy?url=${encodeURIComponent(target)}` : `https://mytips-self.vercel.app/mytips-icon.png`;
     if (media.platform === "facebook" && direct) {
       videoEmbed = `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(target.split("?")[0] + (target.includes("idorvanity") ? `?idorvanity=${new URL(target).searchParams.get("idorvanity")}` : ""))}&show_text=false&width=560`;
     }
