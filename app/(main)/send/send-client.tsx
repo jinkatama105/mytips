@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePrivy, useWallets } from "@privy-io/react-auth";
 import { useBalance } from "wagmi";
 import { formatEther } from "viem";
-import { monadTestnet } from "viem/chains";
+import { ACTIVE_CHAIN, TESTNET_MODE, CHAIN_LABEL, CHAIN_RPC, explorerAddress } from "@/lib/chain";
 import MonPrice from "@/components/mon-price";
 import { detectMedia, embedSrc, type Media } from "@/lib/media";
 const TX_RE = /^0x[0-9a-fA-F]{64}$/;
@@ -76,7 +76,7 @@ export default function SendClient() {
   const [menuOpen, setMenuOpen] = useState(false);
   const { data: balance } = useBalance({
     address: wallet?.address as `0x${string}` | undefined,
-    chainId: monadTestnet.id,
+    chainId: ACTIVE_CHAIN.id,
     query: { enabled: !!wallet && menuOpen, staleTime: 15_000 },
   });
   const [handle, setHandle] = useState<string | null>(null);
@@ -99,7 +99,7 @@ export default function SendClient() {
     let dead = false;
     async function f() {
       try {
-        const r = await fetch("https://rpc-testnet.monad.xyz", {
+        const r = await fetch(CHAIN_RPC, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "eth_getBalance", params: [wallet.address, "latest"] }),
@@ -263,13 +263,13 @@ export default function SendClient() {
                         ? `${formatEther(balance.value).slice(0, 9).replace(/\.?0*$/, "")} ${balance.symbol}`
                         : "…"}
                       <span className="text-[11px] font-normal text-slate-400">
-                        {" "}· Monad Testnet
+                        {" "}· {CHAIN_LABEL}
                       </span>
                     </p>
                   </div>
                   <div className="border-t border-slate-100 mt-3.5 -mb-1 pt-1.5 space-y-0.5">
                     <a
-                      href={`https://testnet.monadexplorer.com/address/${wallet.address}`}
+                      href={explorerAddress(wallet.address)}
                       target="_blank"
                       rel="noreferrer"
                       onClick={() => setMenuOpen(false)}

@@ -5,6 +5,7 @@ import { WagmiProvider, createConfig } from "@privy-io/wagmi";
 import { http } from "viem";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { monadTestnet, monad } from "viem/chains";
+import { ACTIVE_CHAIN, TESTNET_MODE } from "./chain";
 import { injected } from "wagmi/connectors";
 
 const wagmiConfig = createConfig({
@@ -28,8 +29,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
             theme: "light",
             accentColor: "#7c3aed",
           },
-          defaultChain: monadTestnet,
-          supportedChains: [monadTestnet, monad],
+          defaultChain: ACTIVE_CHAIN,
+          supportedChains: TESTNET_MODE ? [monadTestnet, monad] : [monad, monadTestnet],
         }}
       >
         <WagmiProvider config={wagmiConfig}>{children}</WagmiProvider>

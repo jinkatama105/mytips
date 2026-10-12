@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePrivy } from "@privy-io/react-auth";
 import MonPrice from "@/components/mon-price";
+import { CHAIN_LABEL } from "@/lib/chain";
 
 export default function Home() {
   const { ready, authenticated, login } = usePrivy();
@@ -124,7 +125,7 @@ export default function Home() {
       </section>
 
       <footer className="py-6 text-center text-xs text-slate-400">
-        Monad Testnet · chain 10143 · built for the Metropolis hackathon
+        {CHAIN_LABEL} · built for the Metropolis hackathon
       </footer>
     </main>
   );
