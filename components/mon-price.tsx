@@ -41,7 +41,7 @@ export default function MonPrice({ compact = false }: { compact?: boolean }) {
       <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
       MON&nbsp;<span className="font-bold">${usd.toFixed(4)}</span>
       {chg != null && (
-        <span className={up ? "text-emerald-600" : "text-rose-600"}>
+        <span className={`${up ? "text-emerald-600" : "text-rose-600"} ${compact ? "hidden sm:inline" : ""}`}>
           {up ? "▲" : "▼"} {Math.abs(chg).toFixed(1)}%
         </span>
       )}

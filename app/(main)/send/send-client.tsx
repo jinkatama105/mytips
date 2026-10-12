@@ -7,6 +7,7 @@ import { useBalance } from "wagmi";
 import { formatEther } from "viem";
 import { ACTIVE_CHAIN, TESTNET_MODE, CHAIN_LABEL, CHAIN_RPC, explorerAddress } from "@/lib/chain";
 import { detectMedia, embedSrc, type Media } from "@/lib/media";
+import MonPrice from "@/components/mon-price";
 const TX_RE = /^0x[0-9a-fA-F]{64}$/;
 
 // "42" | "42s" | "1m30s" | "0:24" | "0:24.5" -> seconds
@@ -210,12 +211,15 @@ export default function SendClient() {
 
   return (
     <main className="min-h-screen bg-[#faf9fc] text-slate-900">
-      <header className="px-6 py-4 flex items-center justify-between gap-3 max-w-md mx-auto w-full">
-        <Link href="/" className="font-bold text-lg tracking-tight flex items-center shrink-0">
-          <img src="/mytips-icon.png" alt="" className="w-[36px] h-[36px] inline-block" />
+      <header className="px-4 py-4 flex items-center justify-between gap-2 max-w-md mx-auto w-full">
+        <Link href="/" className="font-bold text-base tracking-tight flex items-center shrink-0">
+          <img src="/mytips-icon.png" alt="" className="w-[32px] h-[32px] inline-block" />
           MY<span className="text-violet-600">TIPS</span>
         </Link>
-        <div className="flex items-center justify-end min-w-0">
+        <div className="flex items-center justify-end min-w-0 shrink-0">
+          <MonPrice compact />
+        </div>
+        <div className="flex items-center justify-end min-w-0 shrink-0">
           {!ready ? null : wallet ? (
             <div className="relative" onClick={(e) => e.stopPropagation()}>
               <button
