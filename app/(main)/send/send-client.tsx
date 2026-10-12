@@ -69,6 +69,7 @@ export default function SendClient() {
   const wallet = wallets?.[0];
   const [txHash, setTxHash] = useState("");
   const [ytLink, setYtLink] = useState("");
+  const [msg, setMsg] = useState(""); // custom message shown in the gift frame (Saweria-style)
   const [amount, setAmount] = useState(""); // MON to send directly (optional path)
   const [to, setTo] = useState(""); // friend address (optional path)
   const [status, setStatus] = useState("");
@@ -156,13 +157,26 @@ export default function SendClient() {
   const endSec = manualEnd != null && manualEnd > (startSec ?? 0) ? manualEnd : null;
   const timeBad = timeStr.trim() !== "" && (manualStart == null || (rangeParts.length === 2 && (manualEnd == null || manualEnd <= manualStart)));
 
-  const shareUrl = valid && origin
-    ? `${origin}/tx/${txHash.trim()}${media ? `?v=${media.platform === "facebook" ? "fb" : media.id}${media.platform === "facebook" ? `&f=${encodeURIComponent(media.id)}` : ""}${media.platform !== "youtube" ? `&p=${media.platform}` : ""}${media.vertical ? "&sh=1" : ""}${media.platform === "youtube" && startSec != null ? `&t=${startSec}` : ""}${media.platform === "youtube" && endSec != null ? `&e=${endSec}` : ""}${autoplay ? "&ap=1" : ""}` : ""}`
-    : "";
+  const shareUrl = (() => {
+    if (!valid || !origin) return "";
+    const q: string[] = [];
+    if (media) {
+      q.push(`v=${media.platform === "facebook" ? "fb" : media.id}`);
+      if (media.platform === "facebook") q.push(`f=${encodeURIComponent(media.id)}`);
+      if (media.platform !== "youtube") q.push(`p=${media.platform}`);
+      if (media.vertical) q.push("sh=1");
+      if (media.platform === "youtube" && startSec != null) q.push(`t=${startSec}`);
+      if (media.platform === "youtube" && endSec != null) q.push(`e=${endSec}`);
+      if (autoplay) q.push("ap=1");
+    }
+    const m = msg.trim();
+    if (m) q.push(`msg=${encodeURIComponent(m.slice(0, 500))}`);
+    return `${origin}/tx/${txHash.trim()}${q.length ? `?${q.join("&")}` : ""}`;
+  })();
   const previewMedia = media;
 
   // ── per-wallet send history (localStorage, no backend) ──
-  type HistItem = { hash: string; to: string; amount: string; video: string; link: string; ts: number };
+  type HistItem = { hash: string; to: string; amount: string; video: string; link: string; ts: number; msg?: string };
   const [tab, setTab] = useState<"send" | "history">("send");
   const [history, setHistory] = useState<HistItem[]>([]);
   const histKey = wallet?.address ? `ms-history-${wallet.address.toLowerCase()}` : null;
@@ -180,7 +194,8 @@ export default function SendClient() {
           amount: r.amount,
           video: r.video_url,
           link: r.share_link,
-          ts: r.created_at ? new Date(r.created_at).getTime() : Date.now(),
+          msg: r.message || undefined,
+          ts: typeof r.created_at === "number" ? r.created_at * 1000 : r.created_at ? new Date(r.created_at).getTime() : Date.now(),
         }));
         setHistory((local) => {
           const seen = new Set(server.map((s) => s.hash));
@@ -197,7 +212,7 @@ export default function SendClient() {
     if (!histKey || !valid) return;
     const hash = txHash.trim().toLowerCase();
     setHistory((prev) => {
-      const item: HistItem = { hash, to: to.trim(), amount: amount.trim(), video: ytLink.trim(), link: shareUrl, ts: Date.now() };
+      const item: HistItem = { hash, to: to.trim(), amount: amount.trim(), video: ytLink.trim(), link: shareUrl, ts: Date.now(), msg: msg.trim() || undefined };
       const idx = prev.findIndex((p) => p.hash === hash);
       let next: HistItem[];
       if (idx >= 0) {
@@ -218,10 +233,11 @@ export default function SendClient() {
         amount: amount.trim(),
         video_url: ytLink.trim(),
         share_link: shareUrl,
+        message: msg.trim() || undefined,
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [histKey, valid, txHash, to, amount, ytLink, shareUrl]);
+  }, [histKey, valid, txHash, to, amount, ytLink, shareUrl, msg]);
 
   function deleteHistory(hash: string) {
     setHistory((prev) => {
@@ -442,6 +458,9 @@ export default function SendClient() {
                               </span>
                             )}
                           </p>
+                          {h.msg && (
+                            <p className="text-[12px] text-slate-600 mt-1 italic line-clamp-2">“{h.msg}”</p>
+                          )}
                           <p className="text-[11px] text-slate-400 mt-0.5">
                             {fmtTs(h.ts)} ·{" "}
                             <a
@@ -625,6 +644,20 @@ export default function SendClient() {
             </span>
           </label>
         )}
+
+        {/* custom message */}
+        <label className="block mt-4 text-xs font-semibold text-slate-500 uppercase tracking-wide">
+          Step 4 · message (optional)
+        </label>
+        <textarea
+          value={msg}
+          onChange={(e) => setMsg(e.target.value.slice(0, 500))}
+          rows={3}
+          maxLength={500}
+          className="mt-1 w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm resize-none"
+          placeholder="Write something — it shows in the gift card, above the video…"
+        />
+        <p className="text-[11px] text-slate-400 mt-1">{msg.length}/500</p>
 
         {/* generated share link */}
         {shareUrl && (

@@ -14,7 +14,7 @@ function fmtAddr(a?: string | null) {
   return a ? `${a.slice(0, 6)}…${a.slice(-4)}` : "?";
 }
 
-export default function TxView({ hash, media, start, end, autoplay }: { hash: string; media: Media | null; start: number | null; end: number | null; autoplay: boolean }) {
+export default function TxView({ hash, media, start, end, autoplay, message }: { hash: string; media: Media | null; start: number | null; end: number | null; autoplay: boolean; message: string | null }) {
   const [data, setData] = useState<TxData | null>(null);
   const [error, setError] = useState("");
   const [muted, setMuted] = useState(true);
@@ -110,9 +110,20 @@ export default function TxView({ hash, media, start, end, autoplay }: { hash: st
             {hash}
           </div>
 
-          {media && (
+          {(message || media) && (
+            <div className="mt-5 rounded-2xl border-2 border-violet-200 bg-gradient-to-b from-violet-50/70 to-white p-4 text-left">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-violet-500 text-center mb-2">
+                Message from the sender
+              </p>
+              {message && (
+                <p className="text-[15px] leading-relaxed text-slate-800 whitespace-pre-wrap break-words text-center">
+                  “{message}”
+                </p>
+              )}
+              {message && media && <div className="my-3 h-px bg-violet-200/70" />}
+              {media && (
             <div
-              className="mt-5 overflow-hidden rounded-2xl border border-slate-200 shadow-sm mx-auto relative"
+              className="overflow-hidden rounded-2xl border border-slate-200 shadow-sm mx-auto relative"
               style={{ width: media.vertical ? 300 : "100%", aspectRatio: media.vertical ? "9/16" : "16/9", maxWidth: "100%" }}
             >
               <iframe
@@ -156,6 +167,8 @@ export default function TxView({ hash, media, start, end, autoplay }: { hash: st
                   {media.label} · tap the player for sound
                 </p>
               )}
+            </div>
+          )}
             </div>
           )}
         </div>

@@ -12,7 +12,8 @@ export type GiftRow = {
   amount: string;
   video_url: string;
   share_link: string;
-  created_at?: string;
+  message?: string;
+  created_at?: string | number;
 };
 
 const headers = {
@@ -38,6 +39,7 @@ export async function pushGift(g: GiftRow) {
         amt: g.amount,
         vid: g.video_url,
         link: g.share_link,
+        msg: g.message || null,
       }),
     });
     return r.ok;

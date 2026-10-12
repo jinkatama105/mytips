@@ -6,7 +6,14 @@ import type { Media, Platform } from "@/lib/media";
 const TX_RE = /^0x[0-9a-fA-F]{64}$/;
 const PLATFORMS: Platform[] = ["facebook", "twitter", "tiktok", "instagram"];
 
-type Ctx = { params: Promise<{ hash: string }>; searchParams: Promise<{ v?: string; f?: string; p?: string; sh?: string; t?: string; e?: string; ap?: string }> };
+type Ctx = { params: Promise<{ hash: string }>; searchParams: Promise<{ v?: string; f?: string; p?: string; sh?: string; t?: string; e?: string; ap?: string; msg?: string }> };
+
+/** decode the sender's custom message from share-link params (max 500 chars) */
+export function messageFromParam(sp: { msg?: string }): string | null {
+  const raw = sp?.msg?.trim();
+  if (!raw) return null;
+  try { return decodeURIComponent(raw).slice(0, 500) || null; } catch { return raw.slice(0, 500); }
+}
 
 /** rebuild the Media descriptor from share-link params (youtube = legacy bare v id) */
 export function mediaFromParams(sp: { v?: string; f?: string; p?: string; sh?: string }): Media | null {
@@ -41,7 +48,8 @@ export async function generateMetadata({ searchParams }: Ctx) {
   const title = v
     ? "Someone sent you a gift 🎁 — with a video"
     : "On-chain gift sent 🎁 — view the transaction";
-  const desc = "Sent on Monad with MYTIPS — tap to watch the video and see the transaction.";
+  const spMsg = (() => { const raw = sp?.msg?.trim(); if (!raw) return null; try { return decodeURIComponent(raw).slice(0, 140); } catch { return raw.slice(0, 140); } })();
+  const desc = spMsg ? `“${spMsg}” — sent on Monad with MYTIPS.` : "Sent on Monad with MYTIPS — tap to watch the video and see the transaction.";
   const host = "mytips.fun";
   const proto = "https";
   let poster: string | null = null;
@@ -111,5 +119,5 @@ export default async function TxPage({ params, searchParams }: Ctx) {
   const tRaw = parseFloat(sp?.t ?? ""); const eRaw = parseFloat(sp?.e ?? "");
   const t = Number.isFinite(tRaw) && tRaw >= 0 ? Math.floor(tRaw) : null;
   const e = Number.isFinite(eRaw) && eRaw >= 0 ? Math.floor(eRaw) : null;
-  return <TxView hash={hash} media={mediaFromParams(sp)} start={t} end={e != null && e > (t ?? 0) ? e : null} autoplay={sp?.ap === "1"} />;
+  return <TxView hash={hash} media={mediaFromParams(sp)} start={t} end={e != null && e > (t ?? 0) ? e : null} autoplay={sp?.ap === "1"} message={messageFromParam(sp)} />;
 }
