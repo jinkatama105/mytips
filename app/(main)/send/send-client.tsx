@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePrivy, useWallets } from "@privy-io/react-auth";
 import { useBalance } from "wagmi";
 import { formatEther } from "viem";
-import { ACTIVE_CHAIN, TESTNET_MODE, CHAIN_LABEL, CHAIN_RPC, explorerAddress } from "@/lib/chain";
+import { ACTIVE_CHAIN, TESTNET_MODE, CHAIN_LABEL, CHAIN_RPC, explorerAddress, explorerTx } from "@/lib/chain";
 import { detectMedia, embedSrc, type Media } from "@/lib/media";
 import MonPrice from "@/components/mon-price";
 const TX_RE = /^0x[0-9a-fA-F]{64}$/;
@@ -160,6 +160,55 @@ export default function SendClient() {
     : "";
   const previewMedia = media;
 
+  // ── per-wallet send history (localStorage, no backend) ──
+  type HistItem = { hash: string; to: string; amount: string; video: string; link: string; ts: number };
+  const [tab, setTab] = useState<"send" | "history">("send");
+  const [history, setHistory] = useState<HistItem[]>([]);
+  const histKey = wallet?.address ? `ms-history-${wallet.address.toLowerCase()}` : null;
+
+  useEffect(() => {
+    if (!histKey) { setHistory([]); return; }
+    try { setHistory(JSON.parse(localStorage.getItem(histKey) || "[]")); } catch { setHistory([]); }
+  }, [histKey]);
+
+  // upsert whenever a valid tx hash exists (from Send or pasted) — keeps video/amount in sync
+  useEffect(() => {
+    if (!histKey || !valid) return;
+    const hash = txHash.trim().toLowerCase();
+    setHistory((prev) => {
+      const item: HistItem = { hash, to: to.trim(), amount: amount.trim(), video: ytLink.trim(), link: shareUrl, ts: Date.now() };
+      const idx = prev.findIndex((p) => p.hash === hash);
+      let next: HistItem[];
+      if (idx >= 0) {
+        next = [...prev];
+        next[idx] = { ...prev[idx], ...item, ts: prev[idx].ts || item.ts };
+      } else {
+        next = [item, ...prev].slice(0, 50);
+      }
+      try { localStorage.setItem(histKey, JSON.stringify(next)); } catch {}
+      return next;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [histKey, valid, txHash, to, amount, ytLink, shareUrl]);
+
+  function deleteHistory(hash: string) {
+    setHistory((prev) => {
+      const next = prev.filter((p) => p.hash !== hash);
+      if (histKey) { try { localStorage.setItem(histKey, JSON.stringify(next)); } catch {} }
+      return next;
+    });
+  }
+  function clearHistory() {
+    setHistory([]);
+    if (histKey) { try { localStorage.removeItem(histKey); } catch {} }
+  }
+  function fmtTs(ts: number) {
+    return new Date(ts).toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+  }
+  async function copyHistLink(link: string) {
+    try { await navigator.clipboard.writeText(link); setCopied(true); setTimeout(() => setCopied(false), 1200); } catch {}
+  }
+
   async function copyLink() {
     try {
       await navigator.clipboard.writeText(shareUrl);
@@ -312,6 +361,106 @@ export default function SendClient() {
       </header>
 
       <div className="max-w-md mx-auto mt-4 bg-white rounded-3xl border border-slate-200 shadow-sm p-6">
+        {/* tabs */}
+        <div className="flex rounded-xl bg-slate-100 p-1 mb-4">
+          <button
+            onClick={() => setTab("send")}
+            className={`flex-1 rounded-lg py-1.5 text-sm font-medium transition ${tab === "send" ? "bg-white shadow-sm text-slate-900" : "text-slate-500 hover:text-slate-700"}`}
+          >
+            🎁 Send
+          </button>
+          <button
+            onClick={() => setTab("history")}
+            className={`flex-1 rounded-lg py-1.5 text-sm font-medium transition ${tab === "history" ? "bg-white shadow-sm text-slate-900" : "text-slate-500 hover:text-slate-700"}`}
+          >
+            History{history.length > 0 ? ` (${history.length})` : ""}
+          </button>
+        </div>
+
+        {tab === "history" ? (
+          <div>
+            <h1 className="text-xl font-bold">📜 Send history</h1>
+            <p className="text-sm text-slate-500 mt-1 mb-4">
+              Gifts sent from this wallet on this device — tap one to reopen its share link.
+            </p>
+            {history.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-slate-200 py-10 text-center">
+                <p className="text-3xl">🕰️</p>
+                <p className="text-sm text-slate-500 mt-2">
+                  {wallet ? "No sends yet — your gifts will appear here." : "Connect a wallet to see your history."}
+                </p>
+              </div>
+            ) : (
+              <>
+                <ul className="space-y-2">
+                  {history.map((h) => (
+                    <li key={h.hash} className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                      <div className="flex items-start gap-3">
+                        <div className="p-1 rounded-full ring-1 ring-slate-200 shrink-0 mt-0.5">
+                          <WalletAvatar address={h.to || h.hash} size={28} />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-semibold text-slate-800">
+                            {h.amount ? `${h.amount} MON` : "Gift"}
+                            {h.to && (
+                              <span className="font-normal text-slate-500">
+                                {" "}→ {h.to.slice(0, 6)}…{h.to.slice(-4)}
+                              </span>
+                            )}
+                          </p>
+                          <p className="text-[11px] text-slate-400 mt-0.5">
+                            {fmtTs(h.ts)} ·{" "}
+                            <a
+                              href={explorerTx(h.hash)}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="font-mono hover:text-violet-600"
+                            >
+                              {h.hash.slice(0, 10)}…{h.hash.slice(-6)}
+                            </a>
+                            {h.video && <span className="ml-1">· 🎬 video attached</span>}
+                          </p>
+                          {h.link && (
+                            <div className="flex gap-1.5 mt-2">
+                              <a
+                                href={h.link}
+                                className="text-[11px] rounded-lg bg-white border border-slate-200 px-2.5 py-1 font-medium hover:bg-violet-50"
+                              >
+                                Open page →
+                              </a>
+                              <button
+                                onClick={() => copyHistLink(h.link)}
+                                className="text-[11px] rounded-lg bg-white border border-slate-200 px-2.5 py-1 font-medium hover:bg-violet-50"
+                              >
+                                {copied ? "✓ Copied" : "Copy link"}
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                        <button
+                          onClick={() => deleteHistory(h.hash)}
+                          title="Remove from history"
+                          className="text-slate-300 hover:text-red-500 shrink-0 p-1"
+                        >
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                            <path d="M4 7h16M9 7V5a1 1 0 011-1h4a1 1 0 011 1v2m3 0l-.8 12a2 2 0 01-2 1.9H8.8a2 2 0 01-2-1.9L6 7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+                <button
+                  onClick={clearHistory}
+                  className="mt-3 text-xs text-slate-400 hover:text-red-500"
+                >
+                  Clear all history
+                </button>
+              </>
+            )}
+          </div>
+        ) : (
+        <>
         <h1 className="text-xl font-bold">🎁 Send to a friend</h1>
         <p className="text-sm text-slate-500 mt-1">
           Send MON directly or paste any transaction hash, attach a YouTube video, then share the
@@ -504,6 +653,8 @@ export default function SendClient() {
         )}
 
         {status && <p className="mt-4 text-sm text-red-600">{status}</p>}
+        </>
+        )}
       </div>
     </main>
   );
