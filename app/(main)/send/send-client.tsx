@@ -6,7 +6,6 @@ import { usePrivy, useWallets } from "@privy-io/react-auth";
 import { useBalance } from "wagmi";
 import { formatEther } from "viem";
 import { ACTIVE_CHAIN, TESTNET_MODE, CHAIN_LABEL, CHAIN_RPC, explorerAddress } from "@/lib/chain";
-import MonPrice from "@/components/mon-price";
 import { detectMedia, embedSrc, type Media } from "@/lib/media";
 const TX_RE = /^0x[0-9a-fA-F]{64}$/;
 
@@ -211,13 +210,12 @@ export default function SendClient() {
 
   return (
     <main className="min-h-screen bg-[#faf9fc] text-slate-900">
-      <header className="px-6 py-4 flex items-center justify-between max-w-md mx-auto w-full">
-        <Link href="/" className="font-bold text-lg tracking-tight flex items-center">
+      <header className="px-6 py-4 flex items-center justify-between gap-3 max-w-md mx-auto w-full">
+        <Link href="/" className="font-bold text-lg tracking-tight flex items-center shrink-0">
           <img src="/mytips-icon.png" alt="" className="w-[36px] h-[36px] inline-block" />
           MY<span className="text-violet-600">TIPS</span>
         </Link>
-        <div className="flex items-center gap-3">
-          <MonPrice />
+        <div className="flex items-center justify-end min-w-0">
           {!ready ? null : wallet ? (
             <div className="relative" onClick={(e) => e.stopPropagation()}>
               <button
@@ -225,7 +223,7 @@ export default function SendClient() {
                 className="flex items-center gap-1.5 bg-slate-900 hover:bg-black rounded-full pl-1 pr-2.5 py-1 transition-colors shadow-sm"
               >
                 <WalletAvatar size={20} />
-                <span className="text-[11px] font-semibold text-white tracking-tight max-w-[110px] truncate">{displayName}</span>
+                <span className="text-[11px] font-semibold text-white tracking-tight max-w-[90px] truncate">{displayName}</span>
                 <svg width="10" height="10" viewBox="0 0 10 10" className="text-white/60 shrink-0" fill="none">
                   <path d="M2.5 4l2.5 2.5L7.5 4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
                 </svg>
