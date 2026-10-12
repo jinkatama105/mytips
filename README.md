@@ -1,36 +1,54 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# MYTIPS
 
-## Getting Started
+**Send onchain gifts with a video.**
 
-First, run the development server:
+Send native MON on Monad to any wallet (or attach any existing transaction hash), add a YouTube / TikTok / X / Instagram / Facebook / direct video link, and get one shareable gift page:
+
+`https://mytips.fun/tx/0x…?v=<video>`
+
+The page autoplays the video with the transaction details, and the link renders as a rich preview card (thumbnail + video) on X, Telegram, and WhatsApp.
+
+## Features
+
+- **Send gift** — transfer MON to any address via connected wallet, or paste an existing tx hash
+- **Video attach** — YouTube (with start/end time & link timestamps), TikTok, X, Instagram, Facebook (share shortlinks resolved server-side), direct video URLs
+- **Shareable gift page** — video + onchain tx card, receiver can unmute, optional autoplay toggle
+- **Rich link previews** — `og:` / `twitter:card` images generated per platform, incl. proxy for expiring CDN thumbnails
+- **MON price ticker** — live USD price in the header
+
+## Chains
+
+| Environment | Chain | How |
+|---|---|---|
+| Production (`mytips.fun`) | **Monad Mainnet** (143) | default in prod build |
+| Local dev | **Monad Testnet** (10143) | `npm run dev` |
+| Force either | override with `NEXT_PUBLIC_CHAIN=testnet\|mainnet` | e.g. test mainnet locally: `NEXT_PUBLIC_CHAIN=mainnet npm run dev` |
+
+Tx lookups on the share page query both chains automatically, so old testnet links keep working after the mainnet switch.
+
+## Stack
+
+- Next.js 15 (App Router) + TypeScript + Tailwind
+- Privy (wallet auth) + wagmi/viem
+- Vercel (hosting, edge OG image proxy)
+- Domain: `mytips.fun`
+
+## Local development
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run dev          # testnet mode automatically (dev)
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Required env (see `.env.example`): `NEXT_PUBLIC_PRIVY_APP_ID`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Deploy
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+vercel deploy --prod
+```
 
-## Learn More
+Production uses mainnet by default; Vercel env `NEXT_PUBLIC_CHAIN=mainnet` pins it explicitly.
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+---
+Built for the Monad Metropolis hackathon.
