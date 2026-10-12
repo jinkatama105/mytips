@@ -7,8 +7,7 @@ import { useBalance } from "wagmi";
 import { formatEther } from "viem";
 import { monadTestnet } from "viem/chains";
 import MonPrice from "@/components/mon-price";
-
-const YT_RE = /(?:youtube\.com\/(?:watch\?v=|shorts\/|embed\/)|youtu\.be\/)([\w-]{11})/i;
+import { detectMedia, embedSrc } from "@/lib/media";
 const TX_RE = /^0x[0-9a-fA-F]{64}$/;
 
 // "42" | "42s" | "1m30s" | "0:24" | "0:24.5" -> seconds
@@ -125,7 +124,7 @@ export default function SendClient() {
   }, [menuOpen]);
   const [timeStr, setTimeStr] = useState(""); // manual: "90" | "1:23" | "0:24-0:33"
   const [autoplay, setAutoplay] = useState(true); // sender's choice: video starts playing on the share page (always muted)
-  const ytId = ytLink.trim() ? ytLink.match(YT_RE)?.[1] ?? null : null;
+  const media = detectMedia(ytLink);
   const valid = TX_RE.test(txHash.trim());
 
   // start time: manual field wins, else auto from the link (?t= / #t= / &start=)
@@ -137,9 +136,9 @@ export default function SendClient() {
   const timeBad = timeStr.trim() !== "" && (manualStart == null || (rangeParts.length === 2 && (manualEnd == null || manualEnd <= manualStart)));
 
   const shareUrl = valid && origin
-    ? `${origin}/tx/${txHash.trim()}${ytId ? `?v=${ytId}${/\/shorts\//i.test(ytLink) ? "&sh=1" : ""}${startSec != null ? `&t=${startSec}` : ""}${endSec != null ? `&e=${endSec}` : ""}${autoplay ? "&ap=1" : ""}` : ""}`
+    ? `${origin}/tx/${txHash.trim()}${media ? `?v=${media.platform === "facebook" ? "fb" : media.id}${media.platform === "facebook" ? `&f=${encodeURIComponent(media.id)}` : ""}${media.platform !== "youtube" ? `&p=${media.platform}` : ""}${media.vertical ? "&sh=1" : ""}${media.platform === "youtube" && startSec != null ? `&t=${startSec}` : ""}${media.platform === "youtube" && endSec != null ? `&e=${endSec}` : ""}${autoplay ? "&ap=1" : ""}` : ""}`
     : "";
-  const previewVid = shareUrl ? new URL(shareUrl).searchParams.get("v") : null;
+  const previewMedia = media;
 
   async function copyLink() {
     try {
@@ -367,12 +366,12 @@ export default function SendClient() {
           value={ytLink}
           onChange={(e) => setYtLink(e.target.value)}
           className="mt-1 w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm"
-          placeholder="YouTube link — video or Shorts"
+          placeholder="YouTube / Facebook / X / TikTok / Instagram link"
         />
-        {ytLink.trim() && !ytId && (
-          <p className="text-xs text-red-500 mt-1">Not a YouTube link (watch?v=…, youtu.be/…, shorts/…)</p>
+        {ytLink.trim() && !media && (
+          <p className="text-xs text-red-500 mt-1">Not recognized — paste a YouTube, Facebook video, X post, TikTok video, or Instagram reel/post link</p>
         )}
-        {ytId && (
+        {media?.platform === "youtube" && (
           <div className="mt-2 flex items-center gap-2">
             <input
               value={timeStr}
@@ -390,7 +389,7 @@ export default function SendClient() {
             </span>
           </div>
         )}
-        {ytId && (
+        {media && (
           <label className="mt-3 flex items-center gap-3 cursor-pointer select-none rounded-xl border border-slate-200 bg-white px-3 py-2.5">
             <span className="text-sm font-medium text-slate-700 flex-1">
               Play the video automatically
@@ -439,16 +438,17 @@ export default function SendClient() {
                 {copied ? "✓" : "Copy"}
               </button>
             </div>
-            {previewVid && (
+            {previewMedia && shareUrl && (
               <div className="mt-3 overflow-hidden rounded-xl border border-violet-200">
                 <iframe
-                  src={`https://www.youtube-nocookie.com/embed/${previewVid}?autoplay=0&rel=0${startSec != null ? `&start=${Math.floor(startSec)}` : ""}`}
+                  src={embedSrc(previewMedia, { autoplay: false, enableJsApi: false, start: previewMedia.platform === "youtube" ? startSec : null })}
                   className="w-full"
-                  style={{ aspectRatio: "16/9", border: 0 }}
-                  allow="accelerometer; encrypted-media; picture-in-picture"
+                  style={{ aspectRatio: previewMedia.vertical ? "9/16" : "16/9", border: 0, maxHeight: 420 }}
+                  allow="accelerometer; encrypted-media; picture-in-picture; autoplay; fullscreen"
                   allowFullScreen
                   title="video preview"
                 />
+                <p className="text-[10px] text-slate-400 px-2 py-1 bg-slate-50">{previewMedia.label} · what your friend will see</p>
               </div>
             )}
             <div className="flex gap-2 mt-3">

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPublicClient, http, formatEther } from "viem";
 import { monadTestnet, monad } from "viem/chains";
+import { embedSrc, type Media } from "@/lib/media";
 
 const RPC_TEST = createPublicClient({ chain: monadTestnet, transport: http() });
 const RPC_MAIN = createPublicClient({ chain: monad, transport: http() });
@@ -13,7 +14,7 @@ function fmtAddr(a?: string | null) {
   return a ? `${a.slice(0, 6)}…${a.slice(-4)}` : "?";
 }
 
-export default function TxView({ hash, vid, short, start, end, autoplay }: { hash: string; vid: string | null; short: boolean; start: number | null; end: number | null; autoplay: boolean }) {
+export default function TxView({ hash, media, start, end, autoplay }: { hash: string; media: Media | null; start: number | null; end: number | null; autoplay: boolean }) {
   const [data, setData] = useState<TxData | null>(null);
   const [error, setError] = useState("");
   const [muted, setMuted] = useState(true);
@@ -109,20 +110,22 @@ export default function TxView({ hash, vid, short, start, end, autoplay }: { has
             {hash}
           </div>
 
-          {vid && (
+          {media && (
             <div
               className="mt-5 overflow-hidden rounded-2xl border border-slate-200 shadow-sm mx-auto relative"
-              style={{ width: short ? 300 : "100%", aspectRatio: short ? "9/16" : "16/9" }}
+              style={{ width: media.vertical ? 300 : "100%", aspectRatio: media.vertical ? "9/16" : "16/9", maxWidth: "100%" }}
             >
               <iframe
                 ref={playerRef}
-                src={`https://www.youtube-nocookie.com/embed/${vid}?enablejsapi=1&rel=0&mute=${autoplay ? 1 : 0}&autoplay=${autoplay ? 1 : 0}${start != null ? `&start=${start}` : ""}${end != null ? `&end=${end}` : ""}`}
+                src={embedSrc(media, { autoplay, muted: true, start, end, enableJsApi: media.platform === "youtube" })}
                 className="w-full h-full"
                 style={{ border: 0 }}
-                allow="accelerometer; encrypted-media; picture-in-picture; autoplay"
+                allow="accelerometer; encrypted-media; picture-in-picture; autoplay; fullscreen; clipboard-write; autoplay-camera"
                 allowFullScreen
                 title="gift video"
               />
+              {media.platform === "youtube" ? (
+                <>
               <button
                 onClick={toggleMute}
                 aria-label={muted ? "Unmute video" : "Mute video"}
@@ -145,6 +148,12 @@ export default function TxView({ hash, vid, short, start, end, autoplay }: { has
               {autoplay && muted && (
                 <p className="absolute bottom-2 left-2 rounded-full bg-black/60 px-2.5 py-1 text-[11px] font-medium text-white backdrop-blur">
                   Tapping unmute plays with sound
+                </p>
+              )}
+                </>
+              ) : (
+                <p className="absolute bottom-2 left-2 rounded-full bg-black/60 px-2.5 py-1 text-[11px] font-medium text-white backdrop-blur">
+                  {media.label} · tap the player for sound
                 </p>
               )}
             </div>
