@@ -86,13 +86,12 @@ export async function generateMetadata({ searchParams }: Ctx) {
         : {}),
     },
     twitter: {
-      card: videoEmbed ? "player" : poster ? "summary_large_image" : "summary_large_image",
+      // X refuses 'player' cards for non-whitelisted domains (blank preview on *.vercel.app).
+      // summary_large_image always renders; tapping opens the page which autoplays the video.
+      card: "summary_large_image",
       title,
       description: desc,
       images: poster ? [poster] : ["/mytips-icon.png"],
-      player: videoEmbed ?? undefined,
-      playerWidth: media?.vertical ? 360 : 640,
-      playerHeight: media?.vertical ? 640 : 360,
     },
     other: videoEmbed
       ? {
