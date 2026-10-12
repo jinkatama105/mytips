@@ -8,6 +8,7 @@ import { formatEther } from "viem";
 import { ACTIVE_CHAIN, TESTNET_MODE, CHAIN_LABEL, CHAIN_RPC, explorerAddress, explorerTx } from "@/lib/chain";
 import { detectMedia, embedSrc, type Media } from "@/lib/media";
 import MonPrice from "@/components/mon-price";
+import { historyEnabled, pushGift, fetchGifts, removeGift, removeAllGifts, type GiftRow } from "@/lib/history";
 const TX_RE = /^0x[0-9a-fA-F]{64}$/;
 
 // "42" | "42s" | "1m30s" | "0:24" | "0:24.5" -> seconds
@@ -169,6 +170,26 @@ export default function SendClient() {
   useEffect(() => {
     if (!histKey) { setHistory([]); return; }
     try { setHistory(JSON.parse(localStorage.getItem(histKey) || "[]")); } catch { setHistory([]); }
+    // sync from server (Supabase) — cross-device history
+    if (historyEnabled() && wallet?.address) {
+      fetchGifts(wallet.address).then((rows) => {
+        if (!rows.length) return;
+        const server: HistItem[] = rows.map((r: GiftRow) => ({
+          hash: r.tx_hash,
+          to: r.to_addr,
+          amount: r.amount,
+          video: r.video_url,
+          link: r.share_link,
+          ts: r.created_at ? new Date(r.created_at).getTime() : Date.now(),
+        }));
+        setHistory((local) => {
+          const seen = new Set(server.map((s) => s.hash));
+          const merged = [...server, ...local.filter((l) => !seen.has(l.hash))];
+          try { localStorage.setItem(histKey, JSON.stringify(merged.slice(0, 50))); } catch {}
+          return merged.slice(0, 50);
+        });
+      });
+    }
   }, [histKey]);
 
   // upsert whenever a valid tx hash exists (from Send or pasted) — keeps video/amount in sync
@@ -188,6 +209,17 @@ export default function SendClient() {
       try { localStorage.setItem(histKey, JSON.stringify(next)); } catch {}
       return next;
     });
+    // fire-and-forget sync to server
+    if (historyEnabled() && wallet?.address) {
+      pushGift({
+        wallet: wallet.address,
+        tx_hash: txHash.trim(),
+        to_addr: to.trim() || wallet.address,
+        amount: amount.trim(),
+        video_url: ytLink.trim(),
+        share_link: shareUrl,
+      });
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [histKey, valid, txHash, to, amount, ytLink, shareUrl]);
 
@@ -197,10 +229,12 @@ export default function SendClient() {
       if (histKey) { try { localStorage.setItem(histKey, JSON.stringify(next)); } catch {} }
       return next;
     });
+    if (historyEnabled() && wallet?.address) removeGift(wallet.address, hash);
   }
   function clearHistory() {
     setHistory([]);
     if (histKey) { try { localStorage.removeItem(histKey); } catch {} }
+    if (historyEnabled() && wallet?.address) removeAllGifts(wallet.address);
   }
   function fmtTs(ts: number) {
     return new Date(ts).toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
