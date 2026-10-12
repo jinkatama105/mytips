@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import TxView from "./tx-view";
+import { fetchOgImage, curlRedirect } from "@/lib/ogimage";
 import type { Media, Platform } from "@/lib/media";
 
 const TX_RE = /^0x[0-9a-fA-F]{64}$/;
@@ -41,33 +42,55 @@ export async function generateMetadata({ searchParams }: Ctx) {
     ? "Someone sent you a gift 🎁 — with a video"
     : "On-chain gift sent 🎁 — view the transaction";
   const desc = "Sent on Monad with MYTIPS — tap to watch the video and see the transaction.";
-  const ytPoster = media?.platform === "youtube" ? `https://i.ytimg.com/vi/${media.id}/maxresdefault.jpg` : null;
+  const host = process.env.VERCEL_URL ?? "mytips-self.vercel.app";
+  const proto = "https";
+  let poster: string | null = null;
+  let videoEmbed: string | null = null;
+  if (media?.platform === "youtube") {
+    poster = `https://i.ytimg.com/vi/${media.id}/maxresdefault.jpg`;
+    videoEmbed = `https://www.youtube.com/embed/${media.id}?autoplay=1${play("1")}`;
+  } else if (media && media.platform !== "twitter") {
+    // scrape the source page's og:image so chat previews show the real thumbnail
+    let target = media.id;
+    if (media.platform === "facebook" && /facebook\.com\/share\//i.test(target)) {
+      target = (await curlRedirect(target)) ?? target;
+    }
+    const direct = await fetchOgImage(target);
+    // route through our own proxy: FB/IG CDNs expire their signed URLs quickly
+    poster = direct ? `${proto}://${host}/api/og-proxy?url=${encodeURIComponent(target)}` : null;
+    if (media.platform === "facebook" && direct) {
+      videoEmbed = `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(target.split("?")[0] + (target.includes("idorvanity") ? `?idorvanity=${new URL(target).searchParams.get("idorvanity")}` : ""))}&show_text=false&width=560`;
+    }
+  }
   return {
     title,
     description: desc,
     openGraph: {
       title,
       description: desc,
-      images: ytPoster
-        ? [{ url: ytPoster, width: 1280, height: 720 }]
+      images: poster
+        ? [{ url: poster, width: 1280, height: 720 }]
         : [{ url: "/mytips-icon.png" }],
+      ...(videoEmbed
+        ? { videos: [{ url: videoEmbed, width: media!.vertical ? 360 : 640, height: media!.vertical ? 640 : 360 }] }
+        : {}),
     },
     twitter: {
-      card: ytPoster ? "player" : "summary_large_image",
+      card: videoEmbed ? "player" : poster ? "summary_large_image" : "summary_large_image",
       title,
       description: desc,
-      images: ytPoster ? [ytPoster] : ["/mytips-icon.png"],
-      player: ytPoster ? `https://www.youtube.com/embed/${media!.id}?autoplay=1${play("1")}` : undefined,
-      playerWidth: sh ? 360 : 640,
-      playerHeight: sh ? 640 : 360,
+      images: poster ? [poster] : ["/mytips-icon.png"],
+      player: videoEmbed ?? undefined,
+      playerWidth: media?.vertical ? 360 : 640,
+      playerHeight: media?.vertical ? 640 : 360,
     },
-    other: ytPoster
+    other: videoEmbed
       ? {
-          "og:video": `https://www.youtube.com/embed/${media!.id}?autoplay=1${play("1")}`,
-          "og:video:secure_url": `https://www.youtube.com/embed/${media!.id}?autoplay=1${play("1")}`,
+          "og:video": videoEmbed,
+          "og:video:secure_url": videoEmbed,
           "og:video:type": "text/html",
-          "og:video:width": sh ? "360" : "640",
-          "og:video:height": sh ? "640" : "360",
+          "og:video:width": String(media!.vertical ? 360 : 640),
+          "og:video:height": String(media!.vertical ? 640 : 360),
         }
       : {},
   };
