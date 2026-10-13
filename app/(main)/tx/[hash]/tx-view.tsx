@@ -173,11 +173,12 @@ export default function TxView({ hash, media, start, end, autoplay, message }: {
           )}
 
           {(message || media) && (
+            <>
+          {message && (
             <div className="mt-5 rounded-2xl border-2 border-violet-200 bg-gradient-to-b from-violet-50/70 to-white p-4 text-left">
               <p className="text-[10px] font-semibold uppercase tracking-wide text-violet-500 text-center mb-2">
                 Message from the sender
               </p>
-              {message && (
                 <div className="flex items-start gap-2">
                   <p className="flex-1 text-[16px] leading-relaxed text-slate-800 whitespace-pre-wrap break-words text-center">
                     “{message}”
@@ -198,12 +199,12 @@ export default function TxView({ hash, media, start, end, autoplay, message }: {
                     )}
                   </button>
                 </div>
-              )}
-              {message && media && <div className="my-3 h-px bg-violet-200/70" />}
-              {media && (
+            </div>
+          )}
+          {media && (
             <div
-              className="overflow-hidden rounded-2xl border border-slate-200 shadow-sm mx-auto relative"
-              style={{ width: media.vertical ? "min(100%, calc(72vh * 9 / 16))" : "100%", aspectRatio: media.vertical ? "9/16" : "16/9", maxWidth: "100%" }}
+              className={`overflow-hidden rounded-xl border border-slate-200 shadow-sm relative ${message ? "mt-4" : "mt-5"}`}
+              style={media.vertical ? { width: "min(calc(100vw - 12px), calc(88vh * 9 / 16))", aspectRatio: "9/16", marginLeft: "calc(50% - min(calc(100vw - 12px), calc(88vh * 9 / 16)) / 2)" } : { width: "100%", aspectRatio: "16/9" }}
             >
               <iframe
                 ref={playerRef}
@@ -248,7 +249,7 @@ export default function TxView({ hash, media, start, end, autoplay, message }: {
               )}
             </div>
           )}
-            </div>
+            </>
           )}
         </div>
 
