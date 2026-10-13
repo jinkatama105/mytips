@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePrivy, useWallets } from "@privy-io/react-auth";
-import { useBalance } from "wagmi";
+import { useBalance, useDisconnect } from "wagmi";
 import { formatEther } from "viem";
 import { ACTIVE_CHAIN, TESTNET_MODE, CHAIN_LABEL, CHAIN_RPC, explorerAddress, explorerTx } from "@/lib/chain";
 import { detectMedia, embedSrc, type Media } from "@/lib/media";
@@ -66,7 +66,9 @@ export default function SendClient() {
   const { ready, authenticated, login, logout } = usePrivy();
   const { ready: walletsReady, wallets } = useWallets();
   // Privy v3: wallets = all connected/embedded wallets of the logged-in user
-  const wallet = wallets?.[0];
+  const { disconnect: disconnectWagmi } = useDisconnect();
+  // After Privy logout the wagmi connector can still report a wallet — gate UI on session too
+  const wallet = authenticated ? wallets?.[0] : undefined;
   const [txHash, setTxHash] = useState("");
   const [ytLink, setYtLink] = useState("");
   const [msg, setMsg] = useState(""); // custom message shown in the gift frame (Saweria-style)
@@ -97,14 +99,15 @@ export default function SendClient() {
 
   // read wallet balance from the chain, shown next to the amount field
   useEffect(() => {
-    if (!wallet?.address) { setBalanceMon(null); return; }
+    const addr = wallet?.address;
+    if (!addr) { setBalanceMon(null); return; }
     let dead = false;
     async function f() {
       try {
         const r = await fetch(CHAIN_RPC, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "eth_getBalance", params: [wallet.address, "latest"] }),
+          body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "eth_getBalance", params: [addr, "latest"] }),
         });
         const j = await r.json();
         if (dead) return;
@@ -401,6 +404,7 @@ export default function SendClient() {
                     <button
                       onClick={() => {
                         logout();
+                        try { disconnectWagmi(); } catch {}
                         setMenuOpen(false);
                       }}
                       className="w-full flex items-center gap-3 rounded-xl px-3 py-2.5 hover:bg-slate-50 text-slate-800 font-medium text-left"
