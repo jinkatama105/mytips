@@ -28,3 +28,13 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Action buttons show the hand cursor (Tailwind preflight resets to default) */
+button:not(:disabled),
+[role="button"]:not(:disabled),
+label.cursor-pointer {
+  cursor: pointer;
+}
+button:disabled {
+  cursor: not-allowed;
+}
