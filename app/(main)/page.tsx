@@ -62,7 +62,7 @@ export default function Home() {
     <div className="screen">
       <nav>
         <div className="logo"><img className="mark" src="/assets/mytips-icon.png" alt="" /><span>MY<span style={{color:"#7c3aed"}}>TIPS</span></span></div>
-        <div className="navlinks"><a href="#how-it-works">How it works</a><a href="https://github.com/jinkatama105" target="_blank" rel="noopener noreferrer">GitHub</a><span className="monchip"><MonPrice compact /></span></div>
+        <div className="navlinks"><a href="#how-it-works">How it works</a><a href="https://github.com/jinkatama105/mytips" target="_blank" rel="noopener noreferrer">GitHub</a><span className="monchip"><MonPrice compact /></span></div>
         <div className="navbtns">
           {ready && !authenticated ? (
             <button className="btn btn-outline" onClick={login}>Login</button>
