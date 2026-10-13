@@ -175,18 +175,18 @@ export default function TxView({ hash, media, start, end, autoplay, message }: {
           {(message || media) && (
             <>
           {message && (
-            <div className="mt-5 rounded-2xl border-2 border-violet-200 bg-gradient-to-b from-violet-50/70 to-white p-4 text-left">
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-violet-500 text-center mb-2">
+            <div className="mt-3 rounded-2xl border-2 border-violet-200 bg-gradient-to-b from-violet-50/70 to-white p-2.5 text-left">
+              <p className="text-[9px] font-semibold uppercase tracking-wide text-violet-500 text-center mb-1">
                 Message from the sender
               </p>
                 <div className="flex items-start gap-2">
-                  <p className="flex-1 text-[16px] leading-relaxed text-slate-800 whitespace-pre-wrap break-words text-center">
+                  <p className="flex-1 text-[14px] leading-snug text-slate-800 whitespace-pre-wrap break-words text-center">
                     “{message}”
                   </p>
                   <button
                     onClick={speak}
                     title={speaking ? "Stop reading" : "Read the message aloud"}
-                    className={`shrink-0 mt-0.5 flex h-9 w-9 items-center justify-center rounded-full border transition-colors ${speaking ? "bg-violet-600 border-violet-600 text-white" : "bg-white border-slate-200 text-violet-600 hover:border-violet-300"}`}
+                    className={`shrink-0 mt-0.5 flex h-7 w-7 items-center justify-center rounded-full border transition-colors ${speaking ? "bg-violet-600 border-violet-600 text-white" : "bg-white border-slate-200 text-violet-600 hover:border-violet-300"}`}
                   >
                     {speaking ? (
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2" /></svg>
@@ -203,8 +203,8 @@ export default function TxView({ hash, media, start, end, autoplay, message }: {
           )}
           {media && (
             <div
-              className={`overflow-hidden rounded-xl border border-slate-200 shadow-sm relative ${message ? "mt-4" : "mt-5"}`}
-              style={media.vertical ? { width: "min(calc(100vw - 12px), calc(88vh * 9 / 16))", aspectRatio: "9/16", marginLeft: "calc(50% - min(calc(100vw - 12px), calc(88vh * 9 / 16)) / 2)" } : { width: "100%", aspectRatio: "16/9" }}
+              className={`overflow-hidden rounded-xl border border-slate-200 shadow-sm relative ${message ? "mt-3" : "mt-4"}`}
+              style={media.vertical ? { width: "min(calc(100vw - 10px), calc(94vh * 9 / 16))", aspectRatio: "9/16", marginLeft: "calc(50% - min(calc(100vw - 10px), calc(94vh * 9 / 16)) / 2)" } : { width: "100%", aspectRatio: "16/9" }}
             >
               <iframe
                 ref={playerRef}
