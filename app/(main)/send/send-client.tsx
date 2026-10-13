@@ -118,6 +118,22 @@ export default function SendClient() {
 
   const [origin, setOrigin] = useState("");
   useEffect(() => setOrigin(window.location.origin), []);
+  // Relay-style widget: live USD for the amount field + paste-hash toggle
+  const [monUsd, setMonUsd] = useState<number | null>(null);
+  const [hashOpen, setHashOpen] = useState(false);
+  useEffect(() => {
+    let stop = false;
+    async function f() {
+      try {
+        const r = await fetch("https://api.coingecko.com/api/v3/simple/price?ids=monad&vs_currencies=usd");
+        const j = await r.json();
+        if (!stop && j?.monad) setMonUsd(j.monad.usd);
+      } catch {}
+    }
+    f();
+    const iv = setInterval(f, 60000);
+    return () => { stop = true; clearInterval(iv); };
+  }, []);
   useEffect(() => {
     if (!menuOpen) return;
     const close = () => setMenuOpen(false);
@@ -514,172 +530,172 @@ export default function SendClient() {
           </div>
         ) : (
         <>
-        <h1 className="text-xl font-bold">🎁 Send to a friend</h1>
-        <p className="text-sm text-slate-500 mt-1">
-          Send MON directly or paste any transaction hash, attach a YouTube video, then share the
-          link — X, Telegram & WhatsApp show the video right in the preview card.
-        </p>
+        {/* ── Relay-bridge style widget ── */}
 
-        {/* direct send (optional) */}
-        <div className="mt-5 rounded-2xl bg-slate-50 border border-slate-200 p-4">
-          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">
-            Step 1 · send MON from your wallet
-          </p>
-          <input
-            value={to}
-            onChange={(e) => setTo(e.target.value)}
-            className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-mono"
-            placeholder="Friend wallet 0x…"
-          />
-          <div className="flex gap-2 mt-2">
-            <div className="relative flex-1">
+        {/* SELL panel = you send */}
+        <div className="rounded-2xl bg-slate-50 border border-slate-200 p-4 transition-colors focus-within:border-violet-300">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-sm font-semibold text-slate-700">Send</span>
+            {wallet ? (
+              <button onClick={() => setMenuOpen((o) => !o)} className="flex items-center gap-1.5 rounded-full bg-white border border-slate-200 hover:border-slate-300 pl-1.5 pr-2.5 py-1 text-xs font-semibold text-slate-700 transition-colors">
+                <WalletAvatar address={wallet.address} size={18} />
+                <span className="max-w-[90px] truncate">{displayName}</span>
+                <svg width="10" height="10" viewBox="0 0 10 10" fill="none" className="text-slate-400 shrink-0"><path d="M2.5 4l2.5 2.5L7.5 4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" /></svg>
+              </button>
+            ) : (
+              <button onClick={() => login({ loginMethods: ["wallet", "email", "sms"] })} className="flex items-center gap-1.5 rounded-full bg-white border border-slate-200 hover:border-violet-300 px-3 py-1.5 text-xs font-semibold text-slate-700 transition-colors">
+                Select wallet
+                <svg width="10" height="10" viewBox="0 0 10 10" fill="none" className="text-slate-400"><path d="M2.5 4l2.5 2.5L7.5 4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" /></svg>
+              </button>
+            )}
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="min-w-0 flex-1">
               <input
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 inputMode="decimal"
-                className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm pr-14"
-                placeholder="Amount MON"
+                placeholder="0"
+                className="w-full bg-transparent text-[32px] font-bold text-slate-900 outline-none placeholder:text-slate-300 tabular-nums"
               />
+              <p className="text-[12px] text-slate-400 mt-0.5 tabular-nums">
+                ${((parseFloat(amount || "0") * (monUsd ?? 0)) || 0).toFixed(amount && parseFloat(amount) < 1 ? 4 : 2)} USD
+                {balanceMon != null && <span className="ml-2 text-slate-300">· balance {balanceMon}</span>}
+              </p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
               {balanceMon != null && (
                 <button
                   onClick={() => setAmount(String(Math.max(0, parseFloat(balanceMon) - 0.01)))}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-[11px] font-semibold text-violet-600 hover:text-violet-800"
+                  className="text-[11px] font-bold text-violet-600 hover:text-violet-800 uppercase tracking-wide"
                 >
-                  MAX
+                  Max
                 </button>
               )}
+              <span title={CHAIN_LABEL} className="flex items-center gap-2 rounded-full bg-white border border-slate-200 pl-1.5 pr-3 py-1.5 cursor-default">
+                <span className="h-6 w-6 rounded-full bg-violet-600 text-white grid place-items-center text-[11px] font-black shadow-sm">$</span>
+                <span className="text-sm font-bold text-slate-900">MON</span>
+              </span>
             </div>
-            <button
-              onClick={sendDirect}
-              disabled={!wallet}
-              className="rounded-xl bg-slate-900 text-white px-4 py-2.5 text-sm font-medium hover:bg-slate-700 disabled:opacity-40"
-            >
-              {status === "Confirm in your wallet…" ? "Confirm…" : "Send"}
-            </button>
           </div>
-          {wallet ? (
-            <p className="text-[11px] text-slate-400 mt-1.5">
-              Balance: {balanceMon ?? "…"} MON · sent straight from your wallet balance
-            </p>
-          ) : (
-            <p className="text-[11px] text-amber-600 mt-1.5">Connect wallet above to send directly.</p>
+          <div className="mt-3 flex items-center gap-2">
+            <input
+              value={to}
+              onChange={(e) => setTo(e.target.value)}
+              className="w-full rounded-xl bg-white border border-slate-200 focus:border-violet-300 outline-none px-3.5 py-2.5 text-[13px] font-mono text-slate-700 placeholder:text-slate-400 placeholder:font-sans transition-colors"
+              placeholder="Friend wallet 0x…"
+            />
+          </div>
+          <button onClick={() => setHashOpen((o) => !o)} className="mt-2 text-[11px] text-slate-400 hover:text-violet-600 transition-colors">
+            {hashOpen ? "− hide" : "Already sent? paste tx hash +"}
+          </button>
+          {hashOpen && (
+            <input
+              value={txHash}
+              onChange={(e) => setTxHash(e.target.value)}
+              className={`mt-1.5 w-full rounded-xl bg-white border outline-none px-3.5 py-2.5 text-[13px] font-mono ${txHash && !valid ? "border-red-300" : "border-slate-200 focus:border-violet-300"}`}
+              placeholder="0x… transaction hash"
+            />
           )}
+          {txHash && valid && <p className="text-[11px] text-emerald-600 mt-1.5">✓ transaction detected</p>}
         </div>
 
-        {/* tx hash */}
-        <label className="block mt-4 text-xs font-semibold text-slate-500 uppercase tracking-wide">
-          Step 2 · transaction hash (automatic after Send)
-        </label>
-        <input
-          value={txHash}
-          onChange={(e) => setTxHash(e.target.value)}
-          className={`mt-1 w-full rounded-xl border px-4 py-2.5 text-sm font-mono ${
-            txHash && !valid ? "border-red-300" : "border-slate-200"
-          }`}
-          placeholder="auto-filled after Send — or paste any 0x… hash"
-        />
-        {txHash && valid && (
-          <p className="text-[11px] text-emerald-600 mt-1">✓ transaction detected — no need to paste anything</p>
-        )}
+        {/* circular switch = the gift drops down */}
+        <div className="flex justify-center -my-2.5 relative z-10 pointer-events-none">
+          <span className="h-9 w-9 rounded-full bg-white border border-slate-200 shadow-sm grid place-items-center text-base">🎁</span>
+        </div>
 
-        {/* youtube link */}
-        <label className="block mt-4 text-xs font-semibold text-slate-500 uppercase tracking-wide">
-          Step 3 · video (optional)
-        </label>
-        <input
-          value={ytLink}
-          onChange={(e) => setYtLink(e.target.value)}
-          className="mt-1 w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm"
-          placeholder="YouTube / Facebook / X / TikTok / Instagram link"
-        />
-        {ytLink.trim() && !media && !fbResolving && (
-          <p className="text-xs text-red-500 mt-1">Not recognized — paste a YouTube, Facebook, X, TikTok, or public Instagram/Facebook video link.</p>
-        )}
-        {fbResolving && (
-          <p className="text-xs text-slate-400 mt-1 animate-pulse">Resolving Facebook link…</p>
-        )}
-        {media?.platform === "youtube" && (
-          <div className="mt-2 flex items-center gap-2">
-            <input
-              value={timeStr}
-              onChange={(e) => setTimeStr(e.target.value)}
-              inputMode="numeric"
-              placeholder="0:24-0:33"
-              className={`w-28 rounded-xl border px-3 py-2 text-sm ${timeBad ? "border-red-300" : "border-slate-200"}`}
-            />
-            <span className="text-xs text-slate-500">
-              {timeBad
-                ? "Use seconds (90), mm:ss (1:30) or a range (0:24-0:33)"
-                : startSec != null
-                  ? `▶ starts at ${Math.round(startSec * 10) / 10}s${endSec != null ? ` · stops at ${Math.round(endSec * 10) / 10}s` : ""}${manualStart == null ? " — auto-picked from your link, edit here to override" : ""}`
-                  : "start at a second (90 or 0:24) or a range (0:24-0:33) — blank = from the beginning"}
-            </span>
+        {/* BUY panel = friend receives */}
+        <div className="rounded-2xl bg-slate-50 border border-slate-200 p-4 transition-colors focus-within:border-violet-300">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-sm font-semibold text-slate-700">Gift</span>
+            <span className="text-[11px] text-slate-400">optional · up to 3 fields</span>
           </div>
-        )}
-        {media && (
-          <label className="mt-3 flex items-center gap-3 cursor-pointer select-none rounded-xl border border-slate-200 bg-white px-3 py-2.5">
-            <span className="text-sm font-medium text-slate-700 flex-1">
-              Play the video automatically
-              <span className="block text-[11px] font-normal text-slate-400">
-                Always starts muted — the viewer taps unmute. Off = they tap play first.
-              </span>
-            </span>
-            <input
-              type="checkbox"
-              checked={autoplay}
-              onChange={(e) => setAutoplay(e.target.checked)}
-              className="sr-only"
-            />
-            <span
-              aria-hidden="true"
-              className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${
-                autoplay ? "bg-violet-600" : "bg-slate-200"
-              }`}
-            >
-              <span
-                className={`inline-block h-5 w-5 rounded-full bg-white shadow transform transition-transform ${
-                  autoplay ? "translate-x-[22px]" : "translate-x-0.5"
-                }`}
-              />
-            </span>
-          </label>
-        )}
-
-        {/* custom message */}
-        <label className="block mt-4 text-xs font-semibold text-slate-500 uppercase tracking-wide">
-          Step 4 · message (optional)
-        </label>
-        <textarea
-          value={msg}
-          onChange={(e) => setMsg(e.target.value.slice(0, 500))}
-          rows={3}
-          maxLength={500}
-          className="mt-1 w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm resize-none"
-          placeholder="Write something — it shows in the gift card, above the video…"
-        />
-        <p className="text-[11px] text-slate-400 mt-1">{msg.length}/500</p>
-
-        {/* generated share link */}
-        {shareUrl && (
-          <div className="mt-5 rounded-2xl border border-violet-200 bg-violet-50 p-4">
-            <p className="text-xs font-semibold text-violet-600 uppercase tracking-wide">
-              Share link — ready 🎉
-            </p>
-            <div className="flex gap-2 mt-2 items-center">
+          <div className="flex items-center gap-3">
+            <div className="min-w-0 flex-1">
               <input
-                readOnly
-                value={shareUrl}
-                onFocus={(e) => e.target.select()}
-                className="flex-1 rounded-xl border border-violet-200 bg-white px-3 py-2 text-xs font-mono"
+                value={ytLink}
+                onChange={(e) => setYtLink(e.target.value)}
+                placeholder="Paste video link"
+                className="w-full bg-transparent text-[22px] font-bold text-slate-900 outline-none placeholder:text-slate-300 placeholder:font-semibold"
               />
-              <button
-                onClick={copyLink}
-                className="rounded-xl bg-violet-600 text-white px-4 py-2 text-sm font-medium hover:bg-violet-700 shrink-0"
-              >
-                {copied ? "✓" : "Copy"}
-              </button>
+              <p className="text-[12px] text-slate-400 mt-0.5">
+                {media ? (
+                  <span className="text-emerald-600 font-medium">✓ {media.label}{media.platform === "youtube" && startSec != null ? ` · starts ${Math.round(startSec * 10) / 10}s` : ""}</span>
+                ) : fbResolving ? (
+                  <span className="animate-pulse">Resolving link…</span>
+                ) : ytLink.trim() ? (
+                  <span className="text-red-500">Not recognized — YouTube / Facebook / X / TikTok / Instagram</span>
+                ) : (
+                  "YouTube, TikTok, X, Facebook, Instagram"
+                )}
+              </p>
             </div>
-            {previewMedia && shareUrl && (
+            <span className="h-9 w-9 shrink-0 rounded-full bg-white border border-slate-200 grid place-items-center text-lg cursor-default" title="Video gift">🎬</span>
+          </div>
+          {media?.platform === "youtube" && (
+            <div className="mt-3 flex items-center gap-2">
+              <input
+                value={timeStr}
+                onChange={(e) => setTimeStr(e.target.value)}
+                inputMode="numeric"
+                placeholder="0:24-0:33"
+                className={`w-28 rounded-xl bg-white border outline-none px-3 py-2 text-sm font-mono ${timeBad ? "border-red-300" : "border-slate-200 focus:border-violet-300"}`}
+              />
+              <span className="text-[11px] text-slate-400">
+                {timeBad ? "seconds (90), mm:ss (1:30) or range (0:24-0:33)" : "clip window — blank = whole video"}
+              </span>
+            </div>
+          )}
+          {media && (
+            <label className="mt-3 flex items-center gap-3 cursor-pointer select-none rounded-xl bg-white border border-slate-200 px-3 py-2.5">
+              <span className="text-[13px] font-medium text-slate-700 flex-1">
+                Auto-play for your friend
+                <span className="block text-[11px] font-normal text-slate-400">Always starts muted — they tap to unmute.</span>
+              </span>
+              <input type="checkbox" checked={autoplay} onChange={(e) => setAutoplay(e.target.checked)} className="sr-only" />
+              <span aria-hidden="true" className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${autoplay ? "bg-violet-600" : "bg-slate-200"}`}>
+                <span className={`inline-block h-5 w-5 rounded-full bg-white shadow transform transition-transform ${autoplay ? "translate-x-[22px]" : "translate-x-0.5"}`} />
+              </span>
+            </label>
+          )}
+          <textarea
+            value={msg}
+            onChange={(e) => setMsg(e.target.value.slice(0, 500))}
+            rows={2}
+            maxLength={500}
+            className="mt-3 w-full rounded-xl bg-white border border-slate-200 focus:border-violet-300 outline-none px-3.5 py-2.5 text-sm resize-none transition-colors"
+            placeholder="Write a message…"
+          />
+          <p className="text-[10px] text-slate-300 text-right -mt-0.5">{msg.length}/500</p>
+        </div>
+
+        {/* CTA */}
+        {!shareUrl ? (
+          wallet ? (
+            <button
+              onClick={sendDirect}
+              disabled={!amount || parseFloat(amount) <= 0 || !/^0x[0-9a-fA-F]{40}$/.test(to.trim())}
+              className="mt-4 w-full rounded-2xl bg-violet-600 hover:bg-violet-700 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed text-white py-3.5 text-[15px] font-bold transition-colors"
+            >
+              {status === "Confirm in your wallet…" ? "Confirm in wallet…" : amount && parseFloat(amount) > 0 ? `Send ${amount} MON` : "Enter an amount"}
+            </button>
+          ) : (
+            <button
+              onClick={() => login({ loginMethods: ["wallet", "email", "sms"] })}
+              className="mt-4 w-full rounded-2xl bg-violet-600 hover:bg-violet-700 text-white py-3.5 text-[15px] font-bold uppercase tracking-wide transition-colors"
+            >
+              Connect wallet
+            </button>
+          )
+        ) : (
+          <div className="mt-4 rounded-2xl border border-violet-200 bg-violet-50 p-4">
+            <p className="text-xs font-semibold text-violet-600 uppercase tracking-wide">Share link — ready 🎉</p>
+            <div className="flex gap-2 mt-2 items-center">
+              <input readOnly value={shareUrl} onFocus={(e) => e.target.select()} className="flex-1 min-w-0 rounded-xl border border-violet-200 bg-white px-3 py-2 text-xs font-mono" />
+              <button onClick={copyLink} className="rounded-xl bg-violet-600 text-white px-4 py-2 text-sm font-semibold hover:bg-violet-700 shrink-0">{copied ? "✓" : "Copy"}</button>
+            </div>
+            {previewMedia && (
               <div className="mt-3 overflow-hidden rounded-xl border border-violet-200">
                 <iframe
                   src={embedSrc(previewMedia, { autoplay: false, enableJsApi: false, start: previewMedia.platform === "youtube" ? startSec : null })}
@@ -693,33 +709,14 @@ export default function SendClient() {
               </div>
             )}
             <div className="flex gap-2 mt-3">
-              <a
-                href={`https://t.me/share/url?url=${encodeURIComponent(shareUrl)}`}
-                target="_blank"
-                rel="noopener"
-                className="text-xs rounded-lg border border-violet-300 px-3 py-1.5 font-medium hover:bg-white"
-              >
-                Share on Telegram
-              </a>
-              <a
-                href={`https://twitter.com/intent/tweet?text=${encodeURIComponent("Sent you something 🎁")}&url=${encodeURIComponent(shareUrl)}`}
-                target="_blank"
-                rel="noopener"
-                className="text-xs rounded-lg border border-violet-300 px-3 py-1.5 font-medium hover:bg-white"
-              >
-                Share on X
-              </a>
-              <a
-                href={shareUrl}
-                className="text-xs rounded-lg border border-violet-300 px-3 py-1.5 font-medium hover:bg-white"
-              >
-                Open page →
-              </a>
+              <a href={`https://t.me/share/url?url=${encodeURIComponent(shareUrl)}`} target="_blank" rel="noopener" className="text-xs rounded-lg border border-violet-300 px-3 py-1.5 font-medium hover:bg-white">Share on Telegram</a>
+              <a href={`https://twitter.com/intent/tweet?text=${encodeURIComponent("Sent you something 🎁")}&url=${encodeURIComponent(shareUrl)}`} target="_blank" rel="noopener" className="text-xs rounded-lg border border-violet-300 px-3 py-1.5 font-medium hover:bg-white">Share on X</a>
+              <a href={shareUrl} className="text-xs rounded-lg border border-violet-300 px-3 py-1.5 font-medium hover:bg-white">Open page →</a>
             </div>
           </div>
         )}
 
-        {status && <p className="mt-4 text-sm text-red-600">{status}</p>}
+        {status && <p className="mt-3 text-sm text-red-600">{status}</p>}
         </>
         )}
       </div>
