@@ -195,8 +195,8 @@ export default function TxView({ hash, media, start, end, autoplay, message }: {
     <main className="min-h-screen bg-[#faf9fc] text-slate-900 flex flex-col items-center px-4 py-8">
       <div className="w-full max-w-lg">
         <a href="https://mytips.fun" target="_blank" rel="noopener" className="flex items-center justify-center mb-6 no-underline" aria-label="MYTIPS home">
-          <img src="/mytips-icon.png" alt="" className="w-[36px] h-[36px] inline-block" />
-          <span className="font-bold text-lg tracking-tight ml-0 text-slate-900">
+          <img src="/mytips-icon.png" alt="" className="w-[48px] h-[48px] inline-block" />
+          <span className="font-bold text-xl tracking-tight ml-0.5 text-slate-900">
             MY<span className="text-violet-600">TIPS</span>
           </span>
         </a>
