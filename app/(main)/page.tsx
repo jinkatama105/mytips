@@ -128,7 +128,7 @@ export default function Home() {
           <div>
             <div className="kicker">Onchain gifts</div>
             <h1>Send a gift.<br />Make it <span className="hl">remembered.</span></h1>
-            <p className="lede">$MON to any wallet — video attached, message written by the AI Idea Assistant. One link, anywhere. Live on Monad mainnet.</p>
+            <p className="lede">$MON to any wallet — attach a video, add a custom message. Need an idea? MYTIPS AI assistant is ready to help. One link, anywhere. Live on Monad mainnet.</p>
             <div className="hero-cta">
               <Link href="/send" className="btn btn-solid btn-lg">Send a gift</Link>
               <a href="#how" className="btn btn-ghost btn-lg">Explore</a>
