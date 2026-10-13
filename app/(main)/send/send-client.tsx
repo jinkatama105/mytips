@@ -9,6 +9,7 @@ import { ACTIVE_CHAIN, TESTNET_MODE, CHAIN_LABEL, CHAIN_RPC, explorerAddress, ex
 import { detectMedia, embedSrc, type Media } from "@/lib/media";
 import MonPrice from "@/components/mon-price";
 import { historyEnabled, pushGift, fetchGifts, removeGift, removeAllGifts, type GiftRow } from "@/lib/history";
+import IdeasChat from "@/components/ideas-chat";
 const TX_RE = /^0x[0-9a-fA-F]{64}$/;
 
 // "42" | "42s" | "1m30s" | "0:24" | "0:24.5" -> seconds
@@ -196,7 +197,7 @@ export default function SendClient() {
 
   // ── per-wallet send history (localStorage, no backend) ──
   type HistItem = { hash: string; to: string; amount: string; video: string; link: string; ts: number; msg?: string };
-  const [tab, setTab] = useState<"send" | "history">("send");
+  const [tab, setTab] = useState<"send" | "ideas" | "history">("send");
   const [history, setHistory] = useState<HistItem[]>([]);
   const histKey = wallet?.address ? `ms-history-${wallet.address.toLowerCase()}` : null;
 
@@ -440,6 +441,12 @@ export default function SendClient() {
             🎁 Send
           </button>
           <button
+            onClick={() => setTab("ideas")}
+            className={`flex-1 rounded-lg py-1.5 text-sm font-medium transition ${tab === "ideas" ? "bg-white shadow-sm text-slate-900" : "text-slate-500 hover:text-slate-700"}`}
+          >
+            💡 Ideas
+          </button>
+          <button
             onClick={() => setTab("history")}
             className={`flex-1 rounded-lg py-1.5 text-sm font-medium transition ${tab === "history" ? "bg-white shadow-sm text-slate-900" : "text-slate-500 hover:text-slate-700"}`}
           >
@@ -447,7 +454,14 @@ export default function SendClient() {
           </button>
         </div>
 
-        {tab === "history" ? (
+        {tab === "ideas" ? (
+          <IdeasChat
+            onUseMessage={(m) => {
+              setMsg(m);
+              setTab("send");
+            }}
+          />
+        ) : tab === "history" ? (
           <div>
             <h1 className="text-xl font-bold">📜 Send history</h1>
             <p className="text-sm text-slate-500 mt-1 mb-4">
