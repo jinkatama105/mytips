@@ -4,11 +4,12 @@ import { useEffect, useRef, useState } from "react";
 import { createPublicClient, http, formatEther } from "viem";
 import { monadTestnet, monad } from "viem/chains";
 import { embedSrc, type Media } from "@/lib/media";
+import { explorerTx } from "@/lib/chain";
 
 const RPC_TEST = createPublicClient({ chain: monadTestnet, transport: http() });
 const RPC_MAIN = createPublicClient({ chain: monad, transport: http() });
 
-type TxData = { from: string; to: string | null; value: string; block: number; onMain: boolean };
+type TxData = { from: string; to: string | null; value: string; block: number; onMain: boolean; ts: number | null };
 
 function fmtAddr(a?: string | null) {
   return a ? `${a.slice(0, 6)}…${a.slice(-4)}` : "?";
@@ -18,7 +19,39 @@ export default function TxView({ hash, media, start, end, autoplay, message }: {
   const [data, setData] = useState<TxData | null>(null);
   const [error, setError] = useState("");
   const [muted, setMuted] = useState(true);
+  const [blockTs, setBlockTs] = useState<number | null>(null);
+  const [now, setNow] = useState(Date.now());
+  const [speaking, setSpeaking] = useState(false);
   const playerRef = useRef<HTMLIFrameElement>(null);
+
+  // live clock while a gift is on-chain
+  useEffect(() => {
+    if (!blockTs) return;
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, [blockTs]);
+
+  // read the message aloud (browser voices, free — no backend)
+  function speak() {
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) {
+      setError("This browser can't read the message aloud.");
+      return;
+    }
+    if (speaking) {
+      window.speechSynthesis.cancel();
+      setSpeaking(false);
+      return;
+    }
+    const u = new SpeechSynthesisUtterance(message || "");
+    const indo = /\b(apa|gimana|kenapa|terima|makasih|ulang|tahun|selamat|sayang|doang|banget|kok|sih|nih|dong)\b/i.test(message || "");
+    u.lang = indo ? "id-ID" : "en-US";
+    u.rate = 0.95;
+    u.onend = () => setSpeaking(false);
+    u.onerror = () => setSpeaking(false);
+    setSpeaking(true);
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(u);
+  }
 
   // receiver can unmute at any time; muting again is also allowed
   function toggleMute() {
@@ -45,18 +78,26 @@ export default function TxView({ hash, media, start, end, autoplay, message }: {
       for (const [client, onMain] of candidates) {
         try {
           const [tx, rcpt] = await Promise.all([
-            client.getTransaction(hash as any),
-            client.getTransactionReceipt(hash as any),
+            client.getTransaction({ hash: hash as `0x${string}` }),
+            client.getTransactionReceipt({ hash: hash as `0x${string}` }),
           ]);
           if (dead) return;
           if (!rcpt) continue;
+          let ts: number | null = null;
+          try {
+            const blk = await client.getBlock({ blockNumber: rcpt.blockNumber } as any);
+            ts = Number(blk.timestamp) * 1000;
+          } catch {}
+          if (dead) return;
           setData({
             from: tx.from,
             to: tx.to ?? null,
             value: formatEther(tx.value ?? 0n),
             block: Number(rcpt.blockNumber),
             onMain,
+            ts,
           });
+          setBlockTs(ts);
           return;
         } catch {
           /* try next chain */
@@ -77,7 +118,7 @@ export default function TxView({ hash, media, start, end, autoplay, message }: {
 
   return (
     <main className="min-h-screen bg-[#faf9fc] text-slate-900 flex flex-col items-center px-4 py-8">
-      <div className="w-full max-w-md">
+      <div className="w-full max-w-lg">
         <div className="flex items-center justify-center mb-6">
           <img src="/mytips-icon.png" alt="" className="w-[36px] h-[36px] inline-block" />
           <span className="font-bold text-lg tracking-tight ml-0">
@@ -96,8 +137,16 @@ export default function TxView({ hash, media, start, end, autoplay, message }: {
               <p className="text-sm text-slate-500 mt-1">
                 {fmtAddr(data.from)} → {fmtAddr(data.to)}
               </p>
-              <p className="text-xs text-slate-400 mt-1">
-                {data.onMain ? "Monad Mainnet" : "Monad Testnet"} · block {data.block.toLocaleString()}
+              <p className="text-xs text-slate-400 mt-1 tabular-nums">
+                {data.onMain ? "Monad Mainnet" : "Monad Testnet"} · block {data.block.toLocaleString()} ·{" "}
+                {data.ts
+                  ? now - data.ts < 60000
+                    ? "confirmed just now"
+                    : now - data.ts < 3600000
+                      ? `confirmed ${Math.floor((now - data.ts) / 60000)} min ago`
+                      : `confirmed ${new Date(data.ts).toLocaleString()}`
+                  : "confirmed"}
+                {data.ts && now - data.ts < 3600000 && <span className="ml-1 text-emerald-500 animate-pulse">● live</span>}
               </p>
             </>
           ) : error ? (
@@ -106,9 +155,15 @@ export default function TxView({ hash, media, start, end, autoplay, message }: {
             <p className="text-sm text-slate-400 mt-3 animate-pulse">Checking the chain…</p>
           )}
 
-          <div className="mt-4 rounded-xl bg-slate-50 border border-slate-200 px-3 py-2 text-[11px] font-mono text-slate-500 break-all">
-            {hash}
-          </div>
+          <a
+            href={explorerTx(hash)}
+            target="_blank"
+            rel="noreferrer"
+            title="View on Monad explorer"
+            className="mt-4 block rounded-xl bg-slate-50 border border-slate-200 hover:border-violet-300 hover:bg-violet-50/60 transition-colors px-3 py-2 text-[11px] font-mono text-slate-500 break-all"
+          >
+            {hash} <span className="text-violet-500 font-sans font-semibold">↗</span>
+          </a>
 
           {(message || media) && (
             <div className="mt-5 rounded-2xl border-2 border-violet-200 bg-gradient-to-b from-violet-50/70 to-white p-4 text-left">
@@ -116,15 +171,32 @@ export default function TxView({ hash, media, start, end, autoplay, message }: {
                 Message from the sender
               </p>
               {message && (
-                <p className="text-[15px] leading-relaxed text-slate-800 whitespace-pre-wrap break-words text-center">
-                  “{message}”
-                </p>
+                <div className="flex items-start gap-2">
+                  <p className="flex-1 text-[16px] leading-relaxed text-slate-800 whitespace-pre-wrap break-words text-center">
+                    “{message}”
+                  </p>
+                  <button
+                    onClick={speak}
+                    title={speaking ? "Stop reading" : "Read the message aloud"}
+                    className={`shrink-0 mt-0.5 flex h-9 w-9 items-center justify-center rounded-full border transition-colors ${speaking ? "bg-violet-600 border-violet-600 text-white" : "bg-white border-slate-200 text-violet-600 hover:border-violet-300"}`}
+                  >
+                    {speaking ? (
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2" /></svg>
+                    ) : (
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M11 5L6 9H2v6h4l5 5V5z" />
+                        <path d="M15.5 8.5a5 5 0 010 7" />
+                        <path d="M18.5 5.5a9 9 0 010 13" />
+                      </svg>
+                    )}
+                  </button>
+                </div>
               )}
               {message && media && <div className="my-3 h-px bg-violet-200/70" />}
               {media && (
             <div
               className="overflow-hidden rounded-2xl border border-slate-200 shadow-sm mx-auto relative"
-              style={{ width: media.vertical ? 300 : "100%", aspectRatio: media.vertical ? "9/16" : "16/9", maxWidth: "100%" }}
+              style={{ width: "100%", aspectRatio: media.vertical ? "4/5" : "16/9", maxWidth: "100%" }}
             >
               <iframe
                 ref={playerRef}
