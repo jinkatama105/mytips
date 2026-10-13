@@ -77,11 +77,7 @@ export default function Home() {
         <span className="eyebrow">Onchain gifts</span>
         <h1>Send a gift.<br /><span style={{color:"#7c3aed"}}>Make it remembered.</span></h1>
         <p className="subshort">MON to any wallet — video and message attached. One link, anywhere.</p>
-        <div className="herobtns" style={{display:"flex",gap:"12px",marginTop:"18px",justifyContent:"center"}}>
-          <Link className="btn btn-primary" href="/send">Send a gift</Link>
-          <a className="btn btn-outline" href="#how-it-works">How it works</a>
-        </div>
-        <a className="scrollhint" href="#proof" style={{textDecoration:"none"}}>Explore<span className="arrow">↓</span></a>
+        <a className="scrollhint" href="#proof" style={{textDecoration:"none",marginTop:"18px"}}>Explore<span className="arrow">↓</span></a>
       </div>
 
       <div className="stage">
@@ -236,6 +232,7 @@ export default function Home() {
     <div className="cta-band">
       <h2>Someone deserves a gift today.</h2>
       <p>Send MON. Attach the moment. Share one link.</p>
+      <p style={{fontSize:"13px",opacity:.75,marginTop:"6px"}}>No idea what to send? The built-in AI concierge suggests videos and messages that fit the occasion — birthdays, apologies, or the meme of the week.</p>
       <Link className="btn btn-primary" href="/send" style={{fontSize:"15px",padding:"14px 30px"}}>Send a gift</Link>
     </div>
 
