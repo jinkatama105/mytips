@@ -115,15 +115,15 @@ export default function TxView({ hash, media, start, end, autoplay, message }: {
   return (
     <main className="min-h-screen bg-[#faf9fc] text-slate-900 flex flex-col items-center px-4 py-8">
       <div className="w-full max-w-lg">
-        <div className="flex items-center justify-center mb-6">
+        <a href="https://mytips.fun" target="_blank" rel="noopener" className="flex items-center justify-center mb-6 no-underline" aria-label="MYTIPS home">
           <img src="/mytips-icon.png" alt="" className="w-[36px] h-[36px] inline-block" />
-          <span className="font-bold text-lg tracking-tight ml-0">
+          <span className="font-bold text-lg tracking-tight ml-0 text-slate-900">
             MY<span className="text-violet-600">TIPS</span>
           </span>
-        </div>
+        </a>
 
         <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 text-center">
-          <div className="text-5xl mb-2 animate-[popin_0.6s_cubic-bezier(0.2,1.4,0.4,1)]">🎁</div>
+          <img src="/assets/gift_box.png" alt="" width="48" height="48" className="mx-auto mb-2 inline-block animate-[popin_0.6s_cubic-bezier(0.2,1.4,0.4,1)]" />
           <h1 className="text-xl font-bold">A gift arrived on-chain</h1>
           {data ? (
             <>
@@ -255,7 +255,7 @@ export default function TxView({ hash, media, start, end, autoplay, message }: {
 
         <p className="text-center text-xs text-slate-400 mt-6">
           Sent with{" "}
-          <a href="/" className="text-violet-500 underline">
+          <a href="https://mytips.fun" className="text-violet-500 underline font-semibold" target="_blank" rel="noopener">
             MYTIPS
           </a>{" "}
           · tips & gifts land straight in wallets, no escrow

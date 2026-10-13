@@ -195,6 +195,29 @@ export default function SendClient() {
   })();
   const previewMedia = media;
 
+  // ── short link: mytips.fun/g/xxxxxxx instead of the giant query URL ──
+  const [shortUrl, setShortUrl] = useState("");
+  useEffect(() => {
+    setShortUrl("");
+    if (!shareUrl) return;
+    let alive = true;
+    const ctrl = new AbortController();
+    const t = setTimeout(async () => {
+      try {
+        const r = await fetch("/api/shorten", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url: shareUrl }),
+          signal: ctrl.signal,
+        });
+        const j = await r.json();
+        if (alive && j?.slug) setShortUrl(`https://mytips.fun/g/${j.slug}`);
+      } catch {}
+    }, 400);
+    return () => { alive = false; clearTimeout(t); ctrl.abort(); };
+  }, [shareUrl]);
+  const finalUrl = shortUrl || shareUrl;
+
   // ── per-wallet send history (localStorage, no backend) ──
   type HistItem = { hash: string; to: string; amount: string; video: string; link: string; ts: number; msg?: string };
   const [tab, setTab] = useState<"send" | "ideas" | "history">("send");
@@ -232,7 +255,7 @@ export default function SendClient() {
     if (!histKey || !valid) return;
     const hash = txHash.trim().toLowerCase();
     setHistory((prev) => {
-      const item: HistItem = { hash, to: to.trim(), amount: amount.trim(), video: ytLink.trim(), link: shareUrl, ts: Date.now(), msg: msg.trim() || undefined };
+      const item: HistItem = { hash, to: to.trim(), amount: amount.trim(), video: ytLink.trim(), link: finalUrl, ts: Date.now(), msg: msg.trim() || undefined };
       const idx = prev.findIndex((p) => p.hash === hash);
       let next: HistItem[];
       if (idx >= 0) {
@@ -252,12 +275,12 @@ export default function SendClient() {
         to_addr: to.trim() || wallet.address,
         amount: amount.trim(),
         video_url: ytLink.trim(),
-        share_link: shareUrl,
+        share_link: finalUrl,
         message: msg.trim() || undefined,
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [histKey, valid, txHash, to, amount, ytLink, shareUrl, msg]);
+  }, [histKey, valid, txHash, to, amount, ytLink, shareUrl, msg, finalUrl]);
 
   function deleteHistory(hash: string) {
     setHistory((prev) => {
@@ -281,7 +304,7 @@ export default function SendClient() {
 
   async function copyLink() {
     try {
-      await navigator.clipboard.writeText(shareUrl);
+      await navigator.clipboard.writeText(finalUrl);
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     } catch {
@@ -710,7 +733,7 @@ export default function SendClient() {
           <div className="mt-4 rounded-2xl border border-violet-200 bg-violet-50 p-4">
             <p className="text-xs font-semibold text-violet-600 uppercase tracking-wide">Share link — ready 🎉</p>
             <div className="flex gap-2 mt-2 items-center">
-              <input readOnly value={shareUrl} onFocus={(e) => e.target.select()} className="flex-1 min-w-0 rounded-xl border border-violet-200 bg-white px-3 py-2 text-xs font-mono" />
+              <input readOnly value={finalUrl} onFocus={(e) => e.target.select()} className="flex-1 min-w-0 rounded-xl border border-violet-200 bg-white px-3 py-2 text-xs font-mono" />
               <button onClick={copyLink} className="rounded-xl bg-violet-600 text-white px-4 py-2 text-sm font-semibold hover:bg-violet-700 shrink-0">{copied ? "✓" : "Copy"}</button>
             </div>
             {previewMedia && (
@@ -727,9 +750,9 @@ export default function SendClient() {
               </div>
             )}
             <div className="flex gap-2 mt-3">
-              <a href={`https://t.me/share/url?url=${encodeURIComponent(shareUrl)}`} target="_blank" rel="noopener" className="text-xs rounded-lg border border-violet-300 px-3 py-1.5 font-medium hover:bg-white">Share on Telegram</a>
-              <a href={`https://twitter.com/intent/tweet?text=${encodeURIComponent("Sent you something 🎁")}&url=${encodeURIComponent(shareUrl)}`} target="_blank" rel="noopener" className="text-xs rounded-lg border border-violet-300 px-3 py-1.5 font-medium hover:bg-white">Share on X</a>
-              <a href={shareUrl} className="text-xs rounded-lg border border-violet-300 px-3 py-1.5 font-medium hover:bg-white">Open page →</a>
+              <a href={`https://t.me/share/url?url=${encodeURIComponent(finalUrl)}`} target="_blank" rel="noopener" className="text-xs rounded-lg border border-violet-300 px-3 py-1.5 font-medium hover:bg-white">Share on Telegram</a>
+              <a href={`https://twitter.com/intent/tweet?text=${encodeURIComponent("Sent you something 🎁")}&url=${encodeURIComponent(finalUrl)}`} target="_blank" rel="noopener" className="text-xs rounded-lg border border-violet-300 px-3 py-1.5 font-medium hover:bg-white">Share on X</a>
+              <a href={finalUrl} className="text-xs rounded-lg border border-violet-300 px-3 py-1.5 font-medium hover:bg-white">Open page →</a>
             </div>
           </div>
         )}

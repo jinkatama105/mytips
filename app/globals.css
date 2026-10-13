@@ -1,5 +1,8 @@
 html {
   scroll-behavior: smooth;
+  /* MYTIPS is a fixed LIGHT design — cards/landing hardcode white bg.
+     Never let OS dark mode flip foreground to #ededed (white-on-white bug). */
+  color-scheme: light;
 }
 
 @import "tailwindcss";
@@ -16,12 +19,12 @@ html {
   --font-mono: var(--font-geist-mono);
 }
 
+/* REMOVED: default create-next-app dark-mode override.
 @media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  :root { --background: #0a0a0a; --foreground: #ededed; }
 }
+It flipped global text to white on our hardcoded-light cards (white-on-white
+for visitors with OS dark mode). Site stays light for everyone. */
 
 body {
   background: var(--background);

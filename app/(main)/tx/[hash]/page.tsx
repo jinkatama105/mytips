@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import TxView from "./tx-view";
 import { fetchOgImage, curlRedirect } from "@/lib/ogimage";
-import type { Media, Platform } from "@/lib/media";
+import { fbVideoIsVertical, type Media, type Platform } from "@/lib/media";
 
 const TX_RE = /^0x[0-9a-fA-F]{64}$/;
 const PLATFORMS: Platform[] = ["facebook", "twitter", "tiktok", "instagram"];
@@ -119,5 +119,12 @@ export default async function TxPage({ params, searchParams }: Ctx) {
   const tRaw = parseFloat(sp?.t ?? ""); const eRaw = parseFloat(sp?.e ?? "");
   const t = Number.isFinite(tRaw) && tRaw >= 0 ? Math.floor(tRaw) : null;
   const e = Number.isFinite(eRaw) && eRaw >= 0 ? Math.floor(eRaw) : null;
-  return <TxView hash={hash} media={mediaFromParams(sp)} start={t} end={e != null && e > (t ?? 0) ? e : null} autoplay={sp?.ap === "1"} message={messageFromParam(sp)} />;
+  // legacy links (no sh=1): sniff the FB video's real dimensions server-side
+  // so reels posted via /watch/?v= render 9:16 instead of a cropped 16:9 box
+  let media = mediaFromParams(sp);
+  if (media?.platform === "facebook" && !media.vertical) {
+    const v = await fbVideoIsVertical(media.id);
+    if (v) media = { ...media, vertical: true };
+  }
+  return <TxView hash={hash} media={media} start={t} end={e != null && e > (t ?? 0) ? e : null} autoplay={sp?.ap === "1"} message={messageFromParam(sp)} />;
 }

@@ -158,24 +158,14 @@ export default function Home() {
     </div>
 
     <div className="page">
-    <section className="sect">
-      <h2>Everything a gift needs.</h2>
-      <p className="lead">From the first transfer to the moment it's shared, every part stays connected.</p>
-      <div className="feat">
-        <div className="f"><div className="ic">💠</div><h3>Send</h3><p>Native MON to any wallet, or attach an existing transaction hash. No signup, no custody.</p></div>
-        <div className="f"><div className="ic">▶️</div><h3>Watch</h3><p>YouTube, TikTok, X, Instagram, Facebook, or a direct link — plays right on the gift page.</p></div>
-        <div className="f"><div className="ic">✉️</div><h3>Message</h3><p>Type a greeting. It shows beside the video — and can be read aloud as a voice-over.</p></div>
-        <div className="f"><div className="ic">🔗</div><h3>Share</h3><p>One link renders with a live preview in X, Telegram, and WhatsApp.</p></div>
-      </div>
-    </section>
-
     <section id="how-it-works" className="sect" style={{paddingTop:"20px"}}>
       <h2>How it works.</h2>
       <p className="lead">From the first transfer to a link worth opening, each step moves the gift forward.</p>
       <div className="steps">
         <div className="s"><div className="n">1</div><h3>Send or attach</h3><p>Transfer native MON to any wallet — or paste an existing transaction hash to build the gift around it.</p></div>
         <div className="s"><div className="n">2</div><h3>Add video + message</h3><p>Paste a YouTube, TikTok, X, or Instagram link and type a short greeting. It can be read aloud as a voice-over.</p></div>
-        <div className="s"><div className="n">3</div><h3>Share the page</h3><p>One link shows the video, your message, and the transaction — with a live preview in X, Telegram, and WhatsApp.</p></div>
+        <div className="s"><div className="n">3</div><h3>AI Idea Assistant</h3><p>No idea what to send? The built-in concierge suggests videos and messages that fit the occasion — birthdays, apologies, or the meme of the week.</p></div>
+        <div className="s"><div className="n">4</div><h3>Share the page</h3><p>One link shows the video, your message, and the transaction — with a live preview in X, Telegram, and WhatsApp.</p></div>
       </div>
     </section>
     </div>
@@ -232,7 +222,6 @@ export default function Home() {
     <div className="cta-band">
       <h2>Someone deserves a gift today.</h2>
       <p>Send MON. Attach the moment. Share one link.</p>
-      <p style={{fontSize:"13px",opacity:.75,marginTop:"6px"}}>No idea what to send? The built-in AI concierge suggests videos and messages that fit the occasion — birthdays, apologies, or the meme of the week.</p>
       <Link className="btn btn-primary" href="/send" style={{fontSize:"15px",padding:"14px 30px"}}>Send a gift</Link>
     </div>
 

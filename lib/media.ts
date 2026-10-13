@@ -57,6 +57,32 @@ export function detectMedia(link: string): Media | null {
   return null;
 }
 
+/** Server-side: sniff the FB plugin HTML for the video's original dimensions.
+ *  Older share links (made before vertical support) lack sh=1; this recovers
+ *  9:16 layout for reels posted via /watch/ or /videos/ URLs. Null = unknown. */
+export async function fbVideoIsVertical(href: string): Promise<boolean | null> {
+  try {
+    const { execFile } = await import("child_process");
+    const { promisify } = await import("util");
+    const run = promisify(execFile);
+    const u = href.startsWith("http") ? href : `https://${href.replace(/^\/\//, "")}`;
+    const { stdout } = await run(
+      "curl",
+      ["-s", "-A", "Mozilla/5.0", "--max-time", "8",
+        `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(u)}&show_text=false&width=560`],
+      { timeout: 10000, maxBuffer: 8 * 1024 * 1024 }
+    );
+    const w = stdout.match(/"original_width"\s*:\s*(\d+)/);
+    const h = stdout.match(/"original_height"\s*:\s*(\d+)/);
+    if (!w || !h) return null;
+    const iw = parseInt(w[1], 10), ih = parseInt(h[1], 10);
+    if (!iw || !ih) return null;
+    return ih > iw; // taller than wide = reel
+  } catch {
+    return null;
+  }
+}
+
 const FB_SHARE_RE = /(?:facebook\.com|fb\.watch)\/share\/[a-z]\/[\w-]+/i;
 export function isFbShareLink(url: string): boolean {
   return FB_SHARE_RE.test(url);
