@@ -107,9 +107,9 @@
   box-shadow: var(--shadow-1), var(--shadow-2);
 }
 .home-softui .btn-nav {
-  height: 40px;
-  padding: 0 18px;
-  font-size: 13.5px;
+  height: 42px;
+  padding: 0 20px;
+  font-size: 14.5px;
 }
 .home-softui .btn-lg {
   height: 52px;
@@ -141,7 +141,7 @@
   align-items: center;
   gap: 9px;
   font-weight: 700;
-  font-size: 15.5px;
+  font-size: 16.5px;
   letter-spacing: 0.03em;
   color: var(--ink);
   text-decoration: none;
@@ -157,8 +157,9 @@
   gap: 22px;
 }
 .home-softui .nav-links a.ghostlink {
-  font-size: 13px;
-  color: var(--slate);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink);
   text-decoration: none;
   transition: color 200ms ease-out;
 }
@@ -166,13 +167,13 @@
   color: var(--violet);
 }
 .home-softui .monchip {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--slate);
   background: var(--card);
   border: 1px solid var(--line);
   border-radius: 999px;
-  padding: 5px 11px;
+  padding: 6px 12px;
   white-space: nowrap;
 }
 .home-softui .nav-mobile-cta {
