@@ -11,6 +11,74 @@ const RPC_MAIN = createPublicClient({ chain: monad, transport: http() });
 
 type TxData = { from: string; to: string | null; value: string; block: number; onMain: boolean; ts: number | null };
 
+// ---------- TTS language detection (Indonesian vs English) ----------
+// Whole-token stopword lists. Informal/slang Indonesian is covered so
+// messages like "Bisa nggk lu maen gitar?" get an id-ID voice.
+const ID_WORDS = new Set(
+  "nggk nggak ngga gak gk ga engak enggak tak ndak ora ku kamu kau kalian kami kita mereka aku saya gue gua gw lo lu dia ini itu apa gimana gmn kenapa knp knapa kok sih nih dong deh lah loh kan ya iya tidak tdk bukan bkn udah udh sudah sdh belum blum belom blm pernah mau mo bisa bs pengen pgn pingin butuh perlu harus hrs wajib boleh jangan tolong minta mohon bilang blg katanya tanya nanya jawab jwb lihat liat denger dengar dgr nonton main maen makan minum beli jual harga uang duit kerja belajar tidur bangun nanti besok sekarang skrg sebentar bentar bntr cepat lama lagi masih kapan mana dimana kemana darimana sini situ sana orang teman temen tmn rekan kawan bro bang kak kk pak bu mas mbak dek sayang cinta suka lucu keren mantap mantab gokil asik seru bagus jelek besar kecil banyak dikit kurang lebih lumayan capek cape senang sedih galau baper kesel marah kangen rindu makasih makasi terimakasih sukur syukur alhamdulillah alhmdulillah halo hai hai eh cuy coy doi pacar gimana kalau kalo kl klo jika karena karna krn sebab maka tetap makin semakin paling banget bgt amat sangat sekali skali doang aja pergi pulang datang jalan duduk berdiri lari hal baru punya ada sini yuk ayo tidaklah janganlah tuh tu nya gitu gini ginian apaan apasih ngapain ngapa kenalan kenapa2 apa2"
+    .split(/\s+/)
+);
+
+const EN_WORDS = new Set(
+  "the a an is are was were be been being i you he she it we they me him her us them my your his its our their this that these those what when where which who whom why how can could will would shall should may might must do does did have has had am not no yes ok okay and or but if then than so for of in on at to from with by as about into through over under again further once here there all any both each few more most other some such only own same too very just don t now get got go going want wanna gonna let us know send sent gift pay paid happy birthday congrats congratulations thank thanks love luv miss dude man well done nice good great awesome cool amazing stay keep come back call text hello hi hey please pls sorry welcome enjoy fun best win wow omg lol see soon later take care bless blessed pray prayer amen god lord peace friend friends guys hope always life never ever yeah sure right"
+    .split(/\s+/)
+);
+
+function detectTtsLang(raw: string): "id" | "en" {
+  let id = 0, en = 0;
+  for (const w of raw.toLowerCase().replace(/[^a-z0-9]+/g, " ").split(" ")) {
+    if (!w) continue;
+    if (ID_WORDS.has(w)) id++;
+    if (EN_WORDS.has(w)) en++;
+  }
+  // tie → Indonesian (fits MYTIPS' audience)
+  return id >= en ? "id" : "en";
+}
+
+// Expand compressed slang so the synthesizer pronounces it clearly.
+// The on-screen message stays original; only the spoken text is normalized.
+const TTS_SLANG: Record<string, string> = {
+  nggk: "enggak", nggak: "enggak", ngga: "engga", gak: "enggak", gk: "enggak", ga: "enggak",
+  gmn: "gimana", knp: "kenapa", udah: "sudah", udh: "sudah", blm: "belum", blum: "belum",
+  belom: "belum", sm: "sama", sma: "sama", yg: "yang", dgn: "dengan", utk: "untuk",
+  krn: "karena", karna: "karena", bgt: "banget", maen: "main", gitu: "begitu", gini: "begini",
+  aja: "saja", abis: "habis", tdk: "tidak", pgn: "pengen", jg: "juga", spt: "seperti",
+  dr: "dari", hrs: "harus", bs: "bisa", dh: "sudah", alhmdulillah: "alhamdulillah",
+};
+
+function normalizeForTts(text: string): string {
+  return text.replace(/[a-zA-Z]+/g, (w) => {
+    const mapped = TTS_SLANG[w.toLowerCase()];
+    if (!mapped) return w;
+    if (w === w.toUpperCase()) return mapped.toUpperCase();
+    return w[0] === w[0].toUpperCase() && w.length > 1
+      ? mapped[0].toUpperCase() + mapped.slice(1)
+      : mapped;
+  });
+}
+
+function pickVoice(lang: "id" | "en"): SpeechSynthesisVoice | null {
+  try {
+    const voices = window.speechSynthesis.getVoices();
+    let best: SpeechSynthesisVoice | null = null;
+    let bestScore = -1;
+    for (const v of voices) {
+      const l = (v.lang || "").toLowerCase().replace("_", "-");
+      if (!l.startsWith(lang)) continue;
+      let s = 0;
+      if (v.default) s += 10;
+      if (v.localService) s += 2;
+      const n = v.name.toLowerCase();
+      if (n.includes("google")) s += 5;
+      if (n.includes("natural") || n.includes("neural") || n.includes("premium") || n.includes("enhanced")) s += 3;
+      if (s > bestScore) { bestScore = s; best = v; }
+    }
+    return best;
+  } catch {
+    return null;
+  }
+}
+
 export default function TxView({ hash, media, start, end, autoplay, message }: { hash: string; media: Media | null; start: number | null; end: number | null; autoplay: boolean; message: string | null }) {
   const [data, setData] = useState<TxData | null>(null);
   const [error, setError] = useState("");
@@ -38,9 +106,20 @@ export default function TxView({ hash, media, start, end, autoplay, message }: {
       setSpeaking(false);
       return;
     }
-    const u = new SpeechSynthesisUtterance(message || "");
-    const indo = /\b(apa|gimana|kenapa|terima|makasih|ulang|tahun|selamat|sayang|doang|banget|kok|sih|nih|dong)\b/i.test(message || "");
-    u.lang = indo ? "id-ID" : "en-US";
+    const cleaned = (message || "").trim();
+    if (!cleaned) {
+      setError("There's no message to read aloud.");
+      return;
+    }
+    const lang = detectTtsLang(cleaned);
+    const spoken = normalizeForTts(cleaned);
+    const u = new SpeechSynthesisUtterance(spoken);
+    const v = pickVoice(lang);
+    if (v) {
+      u.voice = v;
+    } else {
+      u.lang = lang === "id" ? "id-ID" : "en-US";
+    }
     u.rate = 0.95;
     u.onend = () => setSpeaking(false);
     u.onerror = () => setSpeaking(false);
