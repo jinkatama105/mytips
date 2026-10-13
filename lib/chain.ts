@@ -14,8 +14,8 @@ export const CHAIN_LABEL = useTestnet ? "Monad Testnet" : "Monad Mainnet";
 export const CHAIN_RPC = useTestnet
   ? "https://rpc-testnet.monad.xyz"
   : "https://rpc.monad.xyz";
-export function explorerTx(hash: string) {
-  return useTestnet
+export function explorerTx(hash: string, forceMainnet = false) {
+  return useTestnet && !forceMainnet
     ? `https://testnet.monadexplorer.com/tx/${hash}`
     : `https://monadscan.com/tx/${hash}`;
 }

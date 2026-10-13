@@ -11,10 +11,6 @@ const RPC_MAIN = createPublicClient({ chain: monad, transport: http() });
 
 type TxData = { from: string; to: string | null; value: string; block: number; onMain: boolean; ts: number | null };
 
-function fmtAddr(a?: string | null) {
-  return a ? `${a.slice(0, 6)}…${a.slice(-4)}` : "?";
-}
-
 export default function TxView({ hash, media, start, end, autoplay, message }: { hash: string; media: Media | null; start: number | null; end: number | null; autoplay: boolean; message: string | null }) {
   const [data, setData] = useState<TxData | null>(null);
   const [error, setError] = useState("");
@@ -134,10 +130,19 @@ export default function TxView({ hash, media, start, end, autoplay, message }: {
               <p className="text-3xl font-extrabold text-violet-600 mt-3">
                 {Number(data.value) > 0 ? `${data.value} MON` : "Transaction"}
               </p>
-              <p className="text-sm text-slate-500 mt-1">
-                {fmtAddr(data.from)} → {fmtAddr(data.to)}
-              </p>
-              <p className="text-xs text-slate-400 mt-1 tabular-nums">
+              <a
+                href={explorerTx(hash, data.onMain)}
+                target="_blank"
+                rel="noreferrer"
+                title="Check explorer"
+                className="group relative mt-2 block rounded-xl bg-slate-50 border border-slate-200 hover:border-violet-300 hover:bg-violet-50/60 transition-colors px-3 py-2 text-[11px] font-mono text-slate-500 break-all"
+              >
+                {hash} <span className="text-violet-500 font-sans font-semibold">↗</span>
+                <span className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 rounded-lg bg-slate-900 px-2.5 py-1 text-[11px] font-sans font-medium text-white opacity-0 transition-opacity group-hover:opacity-100 whitespace-nowrap shadow-lg">
+                  Check explorer
+                </span>
+              </a>
+              <p className="text-xs text-slate-400 mt-2 tabular-nums">
                 {data.onMain ? "Monad Mainnet" : "Monad Testnet"} · block {data.block.toLocaleString()} ·{" "}
                 {data.ts
                   ? now - data.ts < 60000
@@ -155,15 +160,17 @@ export default function TxView({ hash, media, start, end, autoplay, message }: {
             <p className="text-sm text-slate-400 mt-3 animate-pulse">Checking the chain…</p>
           )}
 
-          <a
-            href={explorerTx(hash)}
-            target="_blank"
-            rel="noreferrer"
-            title="View on Monad explorer"
-            className="mt-4 block rounded-xl bg-slate-50 border border-slate-200 hover:border-violet-300 hover:bg-violet-50/60 transition-colors px-3 py-2 text-[11px] font-mono text-slate-500 break-all"
-          >
-            {hash} <span className="text-violet-500 font-sans font-semibold">↗</span>
-          </a>
+          {!data && (
+            <a
+              href={explorerTx(hash)}
+              target="_blank"
+              rel="noreferrer"
+              title="Check explorer"
+              className="group relative mt-4 block rounded-xl bg-slate-50 border border-slate-200 hover:border-violet-300 hover:bg-violet-50/60 transition-colors px-3 py-2 text-[11px] font-mono text-slate-500 break-all"
+            >
+              {hash} <span className="text-violet-500 font-sans font-semibold">↗</span>
+            </a>
+          )}
 
           {(message || media) && (
             <div className="mt-5 rounded-2xl border-2 border-violet-200 bg-gradient-to-b from-violet-50/70 to-white p-4 text-left">
@@ -196,7 +203,7 @@ export default function TxView({ hash, media, start, end, autoplay, message }: {
               {media && (
             <div
               className="overflow-hidden rounded-2xl border border-slate-200 shadow-sm mx-auto relative"
-              style={{ width: "100%", aspectRatio: media.vertical ? "4/5" : "16/9", maxWidth: "100%" }}
+              style={{ width: media.vertical ? "min(100%, calc(72vh * 9 / 16))" : "100%", aspectRatio: media.vertical ? "9/16" : "16/9", maxWidth: "100%" }}
             >
               <iframe
                 ref={playerRef}
