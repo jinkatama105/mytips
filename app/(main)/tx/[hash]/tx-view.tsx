@@ -57,21 +57,44 @@ function normalizeForTts(text: string): string {
   });
 }
 
-function pickVoice(lang: "id" | "en"): SpeechSynthesisVoice | null {
+// Deterministic voice pick: same message language → same voice every time.
+// Prefers Google Bahasa Indonesia (best id voice on Chrome/Android), then
+// any id-ID local voice. Score is fully deterministic (sorted candidate list).
+function pickVoice(lang: "id" | "en", cached?: SpeechSynthesisVoice[]): SpeechSynthesisVoice | null {
   try {
-    const voices = window.speechSynthesis.getVoices();
+    const voices = (cached && cached.length ? cached : window.speechSynthesis.getVoices())
+      .slice()
+      .sort((a, b) => a.name.localeCompare(b.name)); // stable order across calls
     let best: SpeechSynthesisVoice | null = null;
     let bestScore = -1;
     for (const v of voices) {
       const l = (v.lang || "").toLowerCase().replace("_", "-");
       if (!l.startsWith(lang)) continue;
       let s = 0;
-      if (v.default) s += 10;
-      if (v.localService) s += 2;
-      const n = v.name.toLowerCase();
-      if (n.includes("google")) s += 5;
-      if (n.includes("natural") || n.includes("neural") || n.includes("premium") || n.includes("enhanced")) s += 3;
+      if (lang === "id") {
+        // exact-match Indonesian voices first, then Malay fallback
+        if (l === "id-id") s += 20;
+        else if (l.startsWith("id")) s += 10;
+        const n = v.name.toLowerCase();
+        if (n.includes("google")) s += 8;
+        if (n.includes("damar") || n.includes("andika") || n.includes("gadis")) s += 5; // known Google id voices
+        if (v.default) s += 2;
+        if (v.localService) s += 1;
+      } else {
+        if (v.default) s += 10;
+        if (v.localService) s += 2;
+        const n = v.name.toLowerCase();
+        if (n.includes("google")) s += 5;
+        if (n.includes("natural") || n.includes("neural") || n.includes("premium") || n.includes("enhanced")) s += 3;
+      }
       if (s > bestScore) { bestScore = s; best = v; }
+    }
+    // last-resort for Indonesian: accept Malay (ms) — closest language available
+    if (!best && lang === "id") {
+      for (const v of voices) {
+        const l = (v.lang || "").toLowerCase().replace("_", "-");
+        if (l.startsWith("ms")) { best = v; break; }
+      }
     }
     return best;
   } catch {
@@ -87,6 +110,23 @@ export default function TxView({ hash, media, start, end, autoplay, message }: {
   const [now, setNow] = useState(Date.now());
   const [speaking, setSpeaking] = useState(false);
   const playerRef = useRef<HTMLIFrameElement>(null);
+  const voicesRef = useRef<SpeechSynthesisVoice[]>([]);
+
+  // Voice lists load ASYNC in Chrome/Safari — getVoices() returns [] until
+  // `voiceschanged` fires. Preload on mount so the picked voice is consistent
+  // (previously: empty list → fallback default voice → "voice keeps changing").
+  useEffect(() => {
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+    const load = () => { voicesRef.current = window.speechSynthesis.getVoices(); };
+    load();
+    window.speechSynthesis.addEventListener("voiceschanged", load);
+    // Chrome desktop sometimes needs a nudge
+    const t = setTimeout(load, 300);
+    return () => {
+      window.speechSynthesis.removeEventListener("voiceschanged", load);
+      clearTimeout(t);
+    };
+  }, []);
 
   // live clock while a gift is on-chain
   useEffect(() => {
@@ -113,19 +153,42 @@ export default function TxView({ hash, media, start, end, autoplay, message }: {
     }
     const lang = detectTtsLang(cleaned);
     const spoken = normalizeForTts(cleaned);
-    const u = new SpeechSynthesisUtterance(spoken);
-    const v = pickVoice(lang);
-    if (v) {
-      u.voice = v;
+
+    // wait until the voice list is actually loaded, then speak — keeps the
+    // Indonesian voice stable instead of falling back to a random default
+    const doSpeak = () => {
+      const u = new SpeechSynthesisUtterance(spoken);
+      const v = pickVoice(lang, voicesRef.current);
+      if (v) {
+        u.voice = v;
+        u.lang = v.lang;
+      } else {
+        u.lang = lang === "id" ? "id-ID" : "en-US";
+      }
+      u.rate = 0.95;
+      u.onend = () => setSpeaking(false);
+      u.onerror = () => setSpeaking(false);
+      setSpeaking(true);
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(u);
+    };
+
+    if (voicesRef.current.length === 0) {
+      // first tap before voices loaded — wait for them (max ~1.5s), then speak
+      let done = false;
+      const finish = () => {
+        if (done) return;
+        done = true;
+        voicesRef.current = window.speechSynthesis.getVoices();
+        window.removeEventListener("voiceschanged", finish);
+        doSpeak();
+      };
+      window.speechSynthesis.getVoices(); // triggers async load in Chrome
+      window.addEventListener("voiceschanged", finish);
+      setTimeout(finish, 1500);
     } else {
-      u.lang = lang === "id" ? "id-ID" : "en-US";
+      doSpeak();
     }
-    u.rate = 0.95;
-    u.onend = () => setSpeaking(false);
-    u.onerror = () => setSpeaking(false);
-    setSpeaking(true);
-    window.speechSynthesis.cancel();
-    window.speechSynthesis.speak(u);
   }
 
   // receiver can unmute at any time; muting again is also allowed
