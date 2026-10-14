@@ -754,6 +754,23 @@ export default function SendClient() {
               <a href={`https://twitter.com/intent/tweet?text=${encodeURIComponent("Sent you something 🎁")}&url=${encodeURIComponent(finalUrl)}`} target="_blank" rel="noopener" className="text-xs rounded-lg border border-violet-300 px-3 py-1.5 font-medium hover:bg-white">Share on X</a>
               <a href={finalUrl} className="text-xs rounded-lg border border-violet-300 px-3 py-1.5 font-medium hover:bg-white">Open page →</a>
             </div>
+            <button
+              onClick={() => {
+                // reset only the gift/video part — keep `to` + `amount` so the user
+                // can immediately send the next gift without a page refresh
+                setYtLink("");
+                setTimeStr("");
+                setMsg("");
+                setTxHash("");
+                setHashOpen(false);
+                setShortUrl("");
+                setStatus("");
+              }}
+              className="mt-3 w-full rounded-xl bg-violet-600 text-white py-2.5 text-[13px] font-bold hover:bg-violet-700 transition-colors"
+            >
+              🎁 Send another gift
+              <span className="block text-[10px] font-normal opacity-80">clears video & message — keeps address and amount</span>
+            </button>
           </div>
         )}
 
