@@ -12,6 +12,12 @@ export const metadata: Metadata = {
   title: "MYTIPS — send onchain gifts with a video",
   description:
     "Send native MON on Monad with a YouTube/TikTok/X video attached — one shareable gift page with the video in the preview card on X, Telegram, and WhatsApp.",
+  other: {
+    // Hard signal for force-dark browsers (Samsung Internet, MIUI, Chrome flags):
+    // this site is light-only; do not auto-darken it.
+    "color-scheme": "light",
+    "supported-color-schemes": "light",
+  },
 };
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
