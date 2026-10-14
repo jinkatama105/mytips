@@ -68,8 +68,15 @@ const ICO = {
   ),
   bulb: (
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-      <path d="M8 11.2V3.4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-      <circle cx="8" cy="11.9" r="1" fill="currentColor" />
+      {/* yellow light bulb */}
+      <circle cx="8" cy="3.4" r="2.2" fill="#FACC15" stroke="#EAB308" strokeWidth="0.8" />
+      {/* antenna */}
+      <line x1="8" y1="5.6" x2="8" y2="7.6" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+      {/* robot head */}
+      <rect x="3.5" y="7.6" width="9" height="6.4" rx="2" stroke="currentColor" strokeWidth="1.4" />
+      <circle cx="6.3" cy="10.6" r="0.95" fill="currentColor" />
+      <circle cx="9.7" cy="10.6" r="0.95" fill="currentColor" />
+      <path d="M6.2 12.6h3.6" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" />
     </svg>
   ),
   share: (
