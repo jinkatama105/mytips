@@ -33,9 +33,10 @@ Live site: **[mytips.fun](https://mytips.fun)**
 - **Send gift** — transfer MON to any wallet via connected wallet (Privy), or paste an existing tx hash
 - **Custom message + AI voice** — the gift page speaks your message (TTS with smart language detection, Indonesian slang-aware)
 - **Video attach** — YouTube (with start/end time), TikTok, X, Instagram, Facebook (shortlinks resolved server-side), direct video URLs
+- **AI gift concierge** — describe the occasion ("birthday for my guitar buddy"), get 3 curated video-gift ideas with a ready-to-send message, powered by Qwen (qwen3.6-flash via Token Plan, server-side)
 - **Rich link previews** — `og:` / `twitter:card` images generated per platform, incl. proxy for expiring CDN thumbnails
 - **MON price ticker** — live USD price in header
-- **Stream overlay** — `/&lt;handle&gt;/overlay` for live-stream tips (OBS browser source)
+- **Short links** — `/g/<slug>` branded share link redirecting to the gift page (used for social sharing)
 
 ## Chains
 
@@ -47,9 +48,9 @@ Live site: **[mytips.fun](https://mytips.fun)**
 
 Tx lookups on the share page query both chains automatically, so old testnet links keep working after the mainnet switch.
 
-## Smart contracts
+## Extras
 
-`contracts/src/TipJar.sol` — live-stream tipping in native MON (register handle, tip by handle, set payout address, withdraw). Deployed on Monad: `0xf98a5e2832b52dba20ff92d1119be44201192f27`.
+`contracts/src/TipJar.sol` — an earlier prototype for streamer tip jars (register handle, tip by handle, withdraw). Deployed on Monad testnet (`0xf98a5e2832b52dba20ff92d1119be44201192f27`); the mainnet product flow (gift pages) does not depend on it.
 
 ## Stack
 
