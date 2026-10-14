@@ -19,8 +19,8 @@ Crypto transfers are boring and forgettable. There's no joy in sending MON — j
 
 ## Demo
 
-**Watch the 74-second walkthrough**
-[▶ mytips-demo-wan3.mp4](https://github.com/jinkatama105/mytips/raw/main/mytips-demo-wan3.mp4) (add it to your repo or post as a link)
+**Watch the 2:22 walkthrough**
+[▶ mytips-demo.mp4](https://github.com/jinkatama105/mytips/raw/main/mytips-demo.mp4) · [YouTube Shorts](https://youtube.com/shorts/slk9rta-72g)
 
 Live site: **[mytips.fun](https://mytips.fun)**
 
